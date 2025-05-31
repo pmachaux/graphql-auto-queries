@@ -1,3 +1,11 @@
-import { getGraphQLAutoQueriesServer } from '@graphql-auto-queries';
+import {
+  getGraphQLAutoQueriesServer,
+  startGraphQLAutoQueriesServer,
+} from '@gaq';
 
-console.log(getGraphQLAutoQueriesServer());
+const server = getGraphQLAutoQueriesServer();
+const { url } = await startGraphQLAutoQueriesServer(server, {
+  listen: { port: 4200 },
+});
+
+console.log(`🚀  Server ready at: ${url}`);

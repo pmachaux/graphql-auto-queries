@@ -8,14 +8,14 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "target": "es2015",
+    "target": "es2022",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": ["es2022", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@graphql-auto-queries": ["libs/gaq/src/index.ts"]
+      "@gaq": ["libs/gaq/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

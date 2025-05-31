@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@gaq": [
+        "libs/gaq/src/index.ts"
+      ],
+      "gaq": [
+        "dist/libs/gaq"
+      ]
+    }
+  },
+  "extends": "..\\..\\..\\..\\apps\\test-app\\tsconfig.app.json"
+}

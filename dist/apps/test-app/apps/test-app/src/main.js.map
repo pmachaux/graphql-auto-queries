@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../../../apps/test-app/src/main.ts"],
-  "sourcesContent": ["import { getGraphQLAutoQueriesServer } from '@graphql-auto-queries';\n\nconsole.log(getGraphQLAutoQueriesServer());\n"],
-  "mappings": "AAAA,kCAA4C;AAE5C,QAAQ,QAAI,yDAA4B,CAAC;",
-  "names": []
-}

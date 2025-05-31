@@ -1,7 +1,11 @@
 {
   "name": "test-app",
   "version": "0.0.1",
+  "dependencies": {
+    "@apollo/server": "4.12.1"
+  },
   "packageManager": "pnpm@10.11.0",
-  "main": "./main.js",
-  "type": "commonjs"
+  "module": "./main.js",
+  "type": "module",
+  "main": "./main.js"
 }

@@ -1,44 +1,44 @@
-const Module = require("module");
-const path = require("path");
-const fs = require("fs");
-const originalResolveFilename = Module._resolveFilename;
-const distPath = __dirname;
-const manifest = [{ "module": "@graphql-auto-queries", "exactMatch": "libs/gaq/src/index.js", "pattern": "libs/gaq/src/index.ts" }];
-Module._resolveFilename = function(request, parent) {
-  let found;
-  for (const entry of manifest) {
-    if (request === entry.module && entry.exactMatch) {
-      const entry2 = manifest.find((x) => request === x.module || request.startsWith(x.module + "/"));
-      const candidate = path.join(distPath, entry2.exactMatch);
-      if (isFile(candidate)) {
-        found = candidate;
-        break;
-      }
-    } else {
-      const re = new RegExp(entry.module.replace(/\*$/, "(?<rest>.*)"));
-      const match = request.match(re);
-      if (match?.groups) {
-        const candidate = path.join(distPath, entry.pattern.replace("*", ""), match.groups.rest);
-        if (isFile(candidate)) {
-          found = candidate;
-        }
-      }
-    }
+// libs/gaq/src/lib/gaq.ts
+import { ApolloServer } from "@apollo/server";
+import { startStandaloneServer } from "@apollo/server/standalone";
+var books = [
+  {
+    title: "The Awakening",
+    author: "Kate Chopin"
+  },
+  {
+    title: "City of Glass",
+    author: "Paul Auster"
   }
-  if (found) {
-    const modifiedArguments = [found, ...[].slice.call(arguments, 1)];
-    return originalResolveFilename.apply(this, modifiedArguments);
-  } else {
-    return originalResolveFilename.apply(this, arguments);
+];
+var typeDefs = `
+type Book {
+  title: String
+  author: String
+}
+
+type Query {
+  books: [Book]
+}
+`;
+var resolvers = {
+  Query: {
+    books: () => books
   }
 };
-function isFile(s) {
-  try {
-    require.resolve(s);
-    return true;
-  } catch (_e) {
-    return false;
-  }
+function getGraphQLAutoQueriesServer() {
+  const server2 = new ApolloServer({
+    typeDefs,
+    resolvers
+  });
+  return server2;
 }
-module.exports = require("./apps/test-app/src/main.js");
+var startGraphQLAutoQueriesServer = startStandaloneServer;
+
+// apps/test-app/src/main.ts
+var server = getGraphQLAutoQueriesServer();
+var { url } = await startGraphQLAutoQueriesServer(server, {
+  listen: { port: 4200 }
+});
+console.log(`\u{1F680}  Server ready at: ${url}`);
 //# sourceMappingURL=main.js.map

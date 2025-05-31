@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../../../../libs/gaq/src/lib/gaq.ts"],
+  "sourcesContent": ["export function getGraphQLAutoQueriesServer(): string {\n  return 'gaq';\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAO,SAAS,8BAAsC;AACpD,SAAO;AACT;",
+  "names": []
+}

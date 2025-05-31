@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../../../libs/gaq/src/index.ts"],
+  "sourcesContent": ["export * from './lib/gaq';\n"],
+  "mappings": ";;;;;;;;;;;;;;AAAA;AAAA;AAAA,wBAAc,sBAAd;",
+  "names": []
+}

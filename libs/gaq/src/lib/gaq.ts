@@ -1,38 +1,26 @@
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-
-const books = [
-  {
-    title: 'The Awakening',
-    author: 'Kate Chopin',
-  },
-  {
-    title: 'City of Glass',
-    author: 'Paul Auster',
-  },
-];
+import { extractQueriesFromSchema } from './schema-analyzer';
 
 const typeDefs = `
-type Book {
-  title: String
-  author: String
-}
+  type Book {
+    title: String
+    author: String
+  }
 
-type Query {
-  books: [Book]
-}
+  type Query {
+    booksResults: [Book]
+  }
 `;
 
-const resolvers = {
-  Query: {
-    books: () => books,
-  },
-};
+// Extract and log available queries
+const availableQueries = extractQueriesFromSchema(typeDefs);
+console.log('Available GraphQL queries:', availableQueries);
 
 export function getGraphQLAutoQueriesServer(): ApolloServer {
   const server = new ApolloServer({
     typeDefs,
-    resolvers,
+    resolvers: {},
   });
 
   return server;

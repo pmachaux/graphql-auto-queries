@@ -1,13 +1,9 @@
-import {
-  parse,
-  GraphQLSchema,
-  buildSchema,
-  DocumentNode,
-  Kind,
-  OperationDefinitionNode,
-} from 'graphql';
+import { parse, Kind } from 'graphql';
 
 export function extractQueriesFromSchema(schemaString: string): string[] {
+  if (!schemaString) {
+    return [];
+  }
   // Parse the schema string into a DocumentNode
   const document = parse(schemaString);
 

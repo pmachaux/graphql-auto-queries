@@ -5,13 +5,13 @@ import {
   DocumentNode,
   DefinitionNode,
   FieldDefinitionNode,
-  ListTypeNode,
   TypeNode,
 } from 'graphql';
 import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
-} from './models/interfaces';
+  GaqResolverDescription,
+} from '../interfaces/common.interfaces';
 
 /**
  * Extracts all query names from a GraphQL schema.
@@ -20,7 +20,9 @@ import {
  * @returns {string[]} An array of query names
  * @example
  **/
-export function extractQueriesFromSchema(schemaString: string): string[] {
+export function extractQueriesFromSchema(
+  schemaString: string
+): GaqResolverDescription[] {
   if (!schemaString) {
     return [];
   }
@@ -38,7 +40,9 @@ export function extractQueriesFromSchema(schemaString: string): string[] {
   }
 
   // Extract all field names from the Query type
-  return queryType.fields.map((field) => field.name.value);
+  return queryType.fields.map((field) => ({
+    queryName: field.name.value,
+  }));
 }
 
 /**

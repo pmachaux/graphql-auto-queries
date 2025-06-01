@@ -29,7 +29,11 @@ describe('schema-analyzer', () => {
       `;
 
       const queries = extractQueriesFromSchema(schema);
-      expect(queries).toEqual(['books', 'book', 'searchBooks']);
+      expect(queries).toEqual([
+        { queryName: 'books' },
+        { queryName: 'book' },
+        { queryName: 'searchBooks' },
+      ]);
     });
 
     it('should return empty array when Query type is not defined', () => {

@@ -1,6 +1,6 @@
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { extractQueriesFromSchema } from './schema-analyzer';
+import { extractQueriesFromSchema } from './gql-utils/schema-analyzer';
 
 const typeDefs = `
   type Book {

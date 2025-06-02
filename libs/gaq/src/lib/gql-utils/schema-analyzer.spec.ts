@@ -1,56 +1,61 @@
 import {
-  extractQueriesFromSchema,
   extractAllTypesDefinitionsFromSchema,
+  getAutoSchemaAndResolvers,
 } from './schema-analyzer';
 
 describe('schema-analyzer', () => {
-  describe('extractQueriesFromSchema', () => {
-    it('should throw an error if the schema is not valid', () => {
-      const schema = `
-        type Query {
-          books:
-        }
-      `;
-
-      expect(() => extractQueriesFromSchema(schema)).toThrow();
-    });
-    it('should extract query names from a valid schema', () => {
-      const schema = `
+  describe('getAutoSchemaAndResolvers', () => {
+    it('should generate schema and resolvers from auto types', () => {
+      const options = {
+        autoTypes: `
         type Book {
           title: String
-          author: String
+          author: Author
         }
-
-        type Query {
+        type Author {
+          name: String
           books: [Book]
-          book(id: ID!): Book
-          searchBooks(title: String): [Book]
         }
-      `;
+      `,
+      };
 
-      const queries = extractQueriesFromSchema(schema);
-      expect(queries).toEqual([
-        { queryName: 'books' },
-        { queryName: 'book' },
-        { queryName: 'searchBooks' },
+      const { gaqSchema, gaqResolverDescriptions } =
+        getAutoSchemaAndResolvers(options);
+
+      expect(gaqResolverDescriptions).toEqual([
+        {
+          queryName: 'bookGaqQueryResult',
+          resultType: 'BookGaqResult',
+          linkedType: 'Book',
+        },
+        {
+          queryName: 'authorGaqQueryResult',
+          resultType: 'AuthorGaqResult',
+          linkedType: 'Author',
+        },
       ]);
+
+      expect(gaqSchema).toContain('type Query {');
+      expect(gaqSchema).toContain(
+        'bookGaqQueryResult(filters: GaqRootFiltersInput): [BookGaqResult]'
+      );
+      expect(gaqSchema).toContain(
+        'authorGaqQueryResult(filters: GaqRootFiltersInput): [AuthorGaqResult]'
+      );
+
+      expect(gaqSchema).toContain(options.autoTypes);
     });
 
-    it('should return empty array when Query type is not defined', () => {
-      const schema = `
-        type Book {
-          title: String
-          author: String
-        }
-      `;
+    it('should handle empty auto types', () => {
+      const options = {
+        autoTypes: '',
+      };
 
-      const queries = extractQueriesFromSchema(schema);
-      expect(queries).toEqual([]);
-    });
+      const { gaqSchema, gaqResolverDescriptions } =
+        getAutoSchemaAndResolvers(options);
 
-    it('should return empty array when schema is empty', () => {
-      const queries = extractQueriesFromSchema('');
-      expect(queries).toEqual([]);
+      expect(gaqResolverDescriptions).toEqual([]);
+      expect(gaqSchema).toBe('');
     });
   });
   describe('extractAllTypesDefinitionsFromSchema', () => {
@@ -84,7 +89,7 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Book: {
-          title: { isReference: false, isArray: false, type: 'String' },
+          title: { resolveField: false, isArray: false, type: 'String' },
         },
       });
     });
@@ -109,18 +114,18 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Book: {
-          title: { isReference: false, isArray: false, type: 'String' },
-          author: { isReference: true, isArray: false, type: 'Author' },
-          tags: { isReference: false, isArray: true, type: 'String' },
-          reviews: { isReference: true, isArray: true, type: 'Review' },
+          title: { resolveField: false, isArray: false, type: 'String' },
+          author: { resolveField: true, isArray: false, type: 'Author' },
+          tags: { resolveField: false, isArray: true, type: 'String' },
+          reviews: { resolveField: true, isArray: true, type: 'Review' },
         },
         Author: {
-          name: { isReference: false, isArray: false, type: 'String' },
-          books: { isReference: true, isArray: true, type: 'Book' },
+          name: { resolveField: false, isArray: false, type: 'String' },
+          books: { resolveField: true, isArray: true, type: 'Book' },
         },
         Review: {
-          rating: { isReference: false, isArray: false, type: 'Int' },
-          comment: { isReference: false, isArray: false, type: 'String' },
+          rating: { resolveField: false, isArray: false, type: 'Int' },
+          comment: { resolveField: false, isArray: false, type: 'String' },
         },
       });
     });
@@ -135,7 +140,7 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Matrix: {
-          values: { isReference: false, isArray: true, type: 'Int' },
+          values: { resolveField: false, isArray: true, type: 'Int' },
         },
       });
     });
@@ -162,18 +167,18 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Post: {
-          title: { isReference: false, isArray: false, type: 'String' },
-          content: { isReference: false, isArray: false, type: 'String' },
+          title: { resolveField: false, isArray: false, type: 'String' },
+          content: { resolveField: false, isArray: false, type: 'String' },
         },
         Comment: {
-          text: { isReference: false, isArray: false, type: 'String' },
+          text: { resolveField: false, isArray: false, type: 'String' },
         },
         User: {
-          id: { isReference: false, isArray: false, type: 'ID' },
-          name: { isReference: false, isArray: false, type: 'String' },
-          email: { isReference: false, isArray: false, type: 'String' },
-          posts: { isReference: true, isArray: true, type: 'Post' },
-          comments: { isReference: true, isArray: true, type: 'Comment' },
+          id: { resolveField: false, isArray: false, type: 'ID' },
+          name: { resolveField: false, isArray: false, type: 'String' },
+          email: { resolveField: false, isArray: false, type: 'String' },
+          posts: { resolveField: true, isArray: true, type: 'Post' },
+          comments: { resolveField: true, isArray: true, type: 'Comment' },
         },
       });
     });

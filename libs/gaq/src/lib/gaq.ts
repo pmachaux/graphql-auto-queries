@@ -1,28 +1,31 @@
-import { ApolloServer } from '@apollo/server';
+import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { extractQueriesFromSchema } from './gql-utils/schema-analyzer';
+import {
+  GaqContext,
+  GaqServer,
+  GaqServerOptions,
+} from './interfaces/common.interfaces';
+import { omit } from './utils';
+import { getMergedSchemaAndResolvers } from './gql-utils/schema-analyzer';
 
-const typeDefs = `
-  type Book {
-    title: String
-    author: String
-  }
+export function getGraphQLAutoQueriesServer(
+  config: GaqServerOptions
+): GaqServer {
+  const schema = getMergedSchemaAndResolvers(config);
 
-  type Query {
-    booksResults: [Book]
-  }
-`;
+  const apolloOnlyConfig = omit(
+    config,
+    'autoTypes',
+    'standardApolloResolvers',
+    'standardGraphqlTypes',
+    'datasources'
+  );
 
-// Extract and log available queries
-const availableQueries = extractQueriesFromSchema(typeDefs);
-console.log('Available GraphQL queries:', availableQueries);
-
-export function getGraphQLAutoQueriesServer(): ApolloServer {
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers: {},
-  });
-
+  const apolloConfig = {
+    ...apolloOnlyConfig,
+    schema,
+  } as ApolloServerOptions<GaqContext>;
+  const server = new ApolloServer<GaqContext>(apolloConfig);
   return server;
 }
 

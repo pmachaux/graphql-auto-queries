@@ -10,40 +10,18 @@ import {
 import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
+  GaqContext,
   GaqResolverDescription,
+  GaqServerOptions,
 } from '../interfaces/common.interfaces';
-
-/**
- * Extracts all query names from a GraphQL schema.
- *
- * @param {string} schemaString - The GraphQL schema as a string
- * @returns {string[]} An array of query names
- * @example
- **/
-export function extractQueriesFromSchema(
-  schemaString: string
-): GaqResolverDescription[] {
-  if (!schemaString) {
-    return [];
-  }
-  // Parse the schema string into a DocumentNode
-  const document = parse(schemaString);
-
-  // Find all type definitions
-  const queryType = document.definitions.find(
-    (def) =>
-      def.kind === Kind.OBJECT_TYPE_DEFINITION && def.name.value === 'Query'
-  );
-
-  if (!queryType || queryType.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    return [];
-  }
-
-  // Extract all field names from the Query type
-  return queryType.fields.map((field) => ({
-    queryName: field.name.value,
-  }));
-}
+import gql from 'graphql-tag';
+import { mergeTypeDefs } from '@graphql-tools/merge';
+import { ApolloServerOptions } from '@apollo/server';
+import { omit } from '../utils';
+import { IResolvers } from '@graphql-tools/utils';
+import { getResolversFromDescriptions } from './gql-querybuilder';
+import { buildSubgraphSchema } from '@apollo/subgraph';
+import { GraphQLSchemaModule } from '@apollo/subgraph/dist/buildSubgraphSchema';
 
 /**
  * Extracts all type definitions from a GraphQL schema and returns them as a record.
@@ -70,12 +48,12 @@ export function extractQueriesFromSchema(
  * // Returns:
  * {
  *   Book: {
- *     title: { isReference: false, isArray: false },
- *     author: { isReference: true, isArray: false },
+ *     title: { resolveField: false, isArray: false },
+ *     author: { resolveField: true, isArray: false },
  *   },
  *   Author: {
- *     name: { isReference: false, isArray: false },
- *     books: { isReference: false, isArray: true },
+ *     name: { resolveField: false, isArray: false },
+ *     books: { resolveField: false, isArray: true },
  *   },
  * }
  */
@@ -124,7 +102,7 @@ function extractFieldDefinition(
   const typeName = extractTypeFromNestedType(field.type);
 
   return {
-    isReference: objectTypeDefinitions.get(typeName) !== undefined,
+    resolveField: objectTypeDefinitions.get(typeName) !== undefined,
     isArray: isArrayType(field.type),
     type: typeName,
   };
@@ -159,4 +137,82 @@ const getObjectTypesDefinitionsFromDocumentNode = (
     .filter(
       (def) => def.name.value !== 'Query' && def.name.value !== 'Mutation'
     );
+};
+
+export const getAutoResolvers = (
+  autoTypes: string
+): GaqResolverDescription[] => {
+  const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
+  return Object.entries(typeDefinitions).map(([typeName, typeDefinition]) => {
+    return {
+      queryName: `${typeName.toLowerCase()}GaqQueryResult`,
+      resultType: `${typeName}GaqResult`,
+      linkedType: typeName,
+    } satisfies GaqResolverDescription;
+  });
+};
+
+export const getAutoSchemaAndResolvers = (
+  options: Pick<GaqServerOptions, 'autoTypes'>
+): { gaqSchema: string; gaqResolverDescriptions: GaqResolverDescription[] } => {
+  const gaqResolverDescriptions = getAutoResolvers(options.autoTypes);
+
+  if (gaqResolverDescriptions.length === 0) {
+    return { gaqSchema: options.autoTypes, gaqResolverDescriptions: [] };
+  }
+
+  const gaqSchema =
+    options.autoTypes +
+    `type Query {
+    ${gaqResolverDescriptions
+      .map(
+        (resolver) =>
+          `${resolver.queryName}(filters: GaqRootFiltersInput): [${resolver.resultType}]`
+      )
+      .join('\n')}
+  }`;
+
+  return { gaqSchema, gaqResolverDescriptions };
+};
+
+export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
+  options: Pick<
+    GaqServerOptions,
+    'autoTypes' | 'standardGraphqlTypes' | 'standardApolloResolvers'
+  >
+): Pick<ApolloServerOptions<TContext>, 'schema'> => {
+  const { gaqSchema, gaqResolverDescriptions } =
+    getAutoSchemaAndResolvers(options);
+  const autoTypesDefs = gql`
+    ${gaqSchema}
+  `;
+  const standardGraphqlTypesDefs = gql`
+    ${options.standardGraphqlTypes}
+  `;
+  const typeDefs = mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs]);
+  const gaqResolvers = getResolversFromDescriptions(gaqResolverDescriptions);
+
+  const otherResolvers = options.standardApolloResolvers
+    ? omit(
+        options.standardApolloResolvers as IResolvers<
+          { Query?: Record<string, any> },
+          TContext
+        >,
+        'Query'
+      )
+    : {};
+
+  const schemaInputs = {
+    typeDefs,
+    resolvers: {
+      ...otherResolvers,
+      Query: {
+        ...(options.standardApolloResolvers?.Query ?? {}),
+        ...gaqResolvers.Query,
+      },
+    },
+  } as GraphQLSchemaModule;
+  return {
+    schema: buildSubgraphSchema([schemaInputs]),
+  };
 };

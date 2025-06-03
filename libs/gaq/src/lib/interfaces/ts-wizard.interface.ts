@@ -25,6 +25,6 @@ export type LooseAutocomplete = string & {};
  * @typeParam K - Union of keys from T that should be required
  * @example
  * type User = { name?: string; age?: number; email?: string };
- * type UserWithRequiredName = WithSomeRequired<User, 'name'>; // name is required, age and email remain optional
+ * type UserWithRequiredName = WithRequired<User, 'name'>; // name is required, age and email remain optional
  */
-export type WithSomeRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;
+export type WithRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;

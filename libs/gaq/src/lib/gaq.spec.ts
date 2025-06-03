@@ -13,29 +13,27 @@ describe('gaq', () => {
     title: String
     author: String
   }
-
-  type Query {
-    booksResults: [Book]
-  }
 `;
   let server: GaqServer;
 
   beforeAll(async () => {
-    const datasources = getMockedDatasource();
     server = getGraphQLAutoQueriesServer({
       autoTypes,
-      datasources,
+      dbConnector: getMockedDatasource(),
     });
-    await server.start();
+    // await server.startGraphQLAutoQueriesServer();
   });
 
-  it('should return books when querying booksResults', async () => {
+  it('should return books when querying bookGaqQueryResult', async () => {
     const response = await server.executeOperation({
       query: `
         query($filters: GaqRootFiltersInput) {
-          booksResults(filters: $filters) {
-            title
-            author
+          bookGaqQueryResult(filters: $filters) {
+            result {
+              title
+              author
+            }
+            count
           }
         }
       `,
@@ -55,11 +53,15 @@ describe('gaq', () => {
       },
     });
     const body = parseGraphQLBody<{
-      booksResults: { title: string; author: string }[];
+      bookGaqQueryResult: {
+        result: { title: string; author: string }[];
+        count: number;
+      }[];
     }>(response.body);
     expect(response.body.kind).toBe('single');
-    expect(body.singleResult.data.booksResults).toEqual([
+    expect(body.singleResult.data.bookGaqQueryResult[0].result).toEqual([
       { title: 'The Great Gatsby', author: 'F. Scott Fitzgerald' },
     ]);
+    expect(body.singleResult.data.bookGaqQueryResult[0].count).toBeDefined();
   });
 });

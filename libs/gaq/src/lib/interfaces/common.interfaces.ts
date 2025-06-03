@@ -1,14 +1,20 @@
-import { ApolloServer, ApolloServerOptions } from '@apollo/server';
-import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
+import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
+import {
+  LooseAutocomplete,
+  Prettify,
+  WithRequired,
+} from './ts-wizard.interface';
 import { IResolvers } from '@graphql-tools/utils';
+import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
+import { ListenOptions } from 'net';
 
-export interface GaqContext {
-  datasources: GaqDbAdapterMap;
+export interface GaqContext extends BaseContext {
+  gaqDbClient: GaqDbClient;
 }
 
 export type GaqOnlyServerOptions = {
-  datasources: GaqDbAdapterMap;
   autoTypes: string;
+  dbConnector: GaqDbConnector;
   standardGraphqlTypes?: ApolloServerOptions<GaqContext>['typeDefs'];
   standardApolloResolvers?: IResolvers<
     { Query?: Record<string, any> } & Record<string, any>,
@@ -20,7 +26,17 @@ export type GaqServerOptions = Prettify<
   Omit<ApolloServerOptions<GaqContext>, 'typeDefs' | 'resolvers' | 'schema'> &
     GaqOnlyServerOptions
 >;
-export type GaqServer = ApolloServer<GaqContext>;
+export type GaqServer<TContext extends GaqContext = GaqContext> =
+  ApolloServer<TContext> & {
+    startGraphQLAutoQueriesServer: (
+      options?: WithRequired<
+        StartStandaloneServerOptions<TContext>,
+        'context'
+      > & {
+        listen?: ListenOptions;
+      }
+    ) => Promise<{ url: string }>;
+  };
 
 export interface GaqResolverDescription {
   queryName: string;
@@ -59,19 +75,20 @@ export type GaqDbQueryOptions = {
   limit?: number;
 };
 
-export interface GaqDbAdapter<T extends object> {
+export interface GaqCollectionClient<T extends object> {
   get(
     filters?: GaqRootQueryFilter<T> | undefined,
     opts?: { traceId?: string } & GaqDbQueryOptions
   ): Promise<Array<T>>;
 }
 
-export type GaqDbAdapterMap = Record<
-  string,
-  {
-    dbAdapter: GaqDbAdapter<any>;
-  }
->;
+export interface GaqDbClient {
+  collection: (collectionName: string) => GaqCollectionClient<any> | null;
+}
+
+export interface GaqDbConnector {
+  connect: () => Promise<GaqDbClient>;
+}
 
 /**************************************************
  **********  END OF DATABASE ADAPTER INTERFACES  **********

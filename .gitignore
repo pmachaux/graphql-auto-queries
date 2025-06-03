@@ -4,6 +4,9 @@ node_modules
 .nx/cache
 .nx/workspace-data
 
+.cursor
+.vscode
+
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md

@@ -1,48 +1,80 @@
 import { getResolversFromDescriptions } from './gql-querybuilder';
-import {
-  GaqResolverDescription,
-  GaqResult,
-} from '../interfaces/common.interfaces';
+import { GaqResolverDescription } from '../interfaces/common.interfaces';
 
-describe('getResolversFromQueries', () => {
-  it('should return resolvers for queries with matching datasources and resolve them', async () => {
-    const queries: GaqResolverDescription[] = [
-      { queryName: 'getUsersGaqQuery', linkedType: 'User', resultType: 'User' },
+describe('getResolversFromDescriptions', () => {
+  it('should create resolvers from descriptions', () => {
+    const mockDescriptions: GaqResolverDescription[] = [
+      {
+        queryName: 'bookGaqQueryResult',
+        resultType: 'BookGaqResult',
+        linkedType: 'Book',
+      },
     ];
-    const mockUserResult = [{ id: '1', name: 'John Doe' }];
-    const datasources = {
-      User: {
-        dbAdapter: {
-          get: () => {
-            return Promise.resolve(mockUserResult) as Promise<GaqResult<any[]>>;
-          },
-        },
+
+    const mockContext = {
+      gaqDbClient: {
+        collection: jest.fn().mockImplementation((type) => ({
+          get: jest.fn().mockResolvedValue([]),
+        })),
       },
     };
-    const result = getResolversFromDescriptions(queries);
-    expect(result.Query).toHaveProperty('getUsersGaqQuery');
-    const getUsersGaqQueryResult = await result?.Query.getUsersGaqQuery(
-      {},
-      {} as any,
-      { datasources },
-      {} as any
-    );
-    expect(getUsersGaqQueryResult).toBe(mockUserResult);
+
+    const resolvers = getResolversFromDescriptions(mockDescriptions);
+    expect(resolvers).toHaveProperty('Query');
+    expect(resolvers.Query).toHaveProperty('bookGaqQueryResult');
+
+    // Test resolver execution
+    const bookResolver = resolvers.Query.bookGaqQueryResult;
+    const result = bookResolver(null, { filter: {} } as any, mockContext, null);
+    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('Book');
+    expect(result).resolves.toEqual([]);
   });
-  it('should have a resolver returning null if no datasource is attached', async () => {
-    const queries: GaqResolverDescription[] = [
-      { queryName: 'getUsersGaqQuery', linkedType: 'User', resultType: 'User' },
+
+  it('should return null when parent is not null', () => {
+    const mockDescriptions: GaqResolverDescription[] = [
+      {
+        queryName: 'userGaqQueryResult',
+        resultType: 'UserGaqResult',
+        linkedType: 'User',
+      },
     ];
 
-    const result = getResolversFromDescriptions(queries);
+    const mockContext = {
+      gaqDbClient: {
+        collection: jest.fn(),
+      },
+    };
 
-    const getUsersGaqQueryResult = await result?.Query.getUsersGaqQuery(
-      {},
-      {} as any,
-      { datasources: {} },
-      {} as any
+    const resolvers = getResolversFromDescriptions(mockDescriptions);
+    const userResolver = resolvers.Query.userGaqQueryResult;
+    const result = userResolver(
+      { someData: 'test' },
+      { filter: {} } as any,
+      mockContext,
+      null
     );
+    expect(result).toBeNull();
+  });
 
-    expect(getUsersGaqQueryResult).toBeNull();
+  it('should return null when collection client is not available', () => {
+    const mockDescriptions: GaqResolverDescription[] = [
+      {
+        queryName: 'userGaqQueryResult',
+        resultType: 'UserGaqResult',
+        linkedType: 'User',
+      },
+    ];
+
+    const mockContext = {
+      gaqDbClient: {
+        collection: jest.fn().mockReturnValue(null),
+      },
+    };
+
+    const resolvers = getResolversFromDescriptions(mockDescriptions);
+    const userResolver = resolvers.Query.userGaqQueryResult;
+    const result = userResolver(null, { filter: {} } as any, mockContext, null);
+    expect(result).toBeNull();
+    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('User');
   });
 });

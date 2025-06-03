@@ -5,20 +5,20 @@ import type {
 } from '../interfaces/common.interfaces';
 import { isNullOrEmptyObject } from '../utils';
 
-const getStandardResolver = (
-  linkedType: string
-): ISchemaLevelResolver<any, any, any, any> => {
-  const standardResolver: ISchemaLevelResolver<any, any, GaqContext, any> = (
+type GaqSchemaLevelResolver = ISchemaLevelResolver<any, any, GaqContext, any>;
+
+const getStandardResolver = (linkedType: string): GaqSchemaLevelResolver => {
+  const standardResolver: GaqSchemaLevelResolver = (
     parent: any,
     args: any,
     contextValue: GaqContext,
     info: any
   ) => {
-    const dbAdapter = contextValue.datasources[linkedType]?.dbAdapter;
-    if (!dbAdapter || !isNullOrEmptyObject(parent)) {
+    const collectionClient = contextValue.gaqDbClient.collection(linkedType);
+    if (!collectionClient || !isNullOrEmptyObject(parent)) {
       return null;
     }
-    return dbAdapter.get(args.filter);
+    return collectionClient.get(args.filter);
   };
 
   return standardResolver;
@@ -27,14 +27,18 @@ const getStandardResolver = (
 export const getResolversFromDescriptions = (
   gaqResolverDescriptions: GaqResolverDescription[]
 ): {
-  Query: Record<string, ISchemaLevelResolver<any, any, GaqContext, any>>;
+  Query: Record<string, GaqSchemaLevelResolver>;
 } => {
+  const resolvers = gaqResolverDescriptions.reduce<
+    Record<string, GaqSchemaLevelResolver>
+  >((acc, query) => {
+    return {
+      ...acc,
+      [query.queryName]: getStandardResolver(query.linkedType),
+    };
+  }, {});
+
   return {
-    Query: gaqResolverDescriptions.reduce<
-      Record<string, ISchemaLevelResolver<any, any, GaqContext, any>>
-    >((acc, query) => {
-      acc[query.queryName] = getStandardResolver(query.linkedType);
-      return acc;
-    }, {}),
+    Query: resolvers,
   };
 };

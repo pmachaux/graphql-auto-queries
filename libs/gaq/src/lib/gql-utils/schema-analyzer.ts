@@ -20,8 +20,32 @@ import { ApolloServerOptions } from '@apollo/server';
 import { omit } from '../utils';
 import { IResolvers } from '@graphql-tools/utils';
 import { getResolversFromDescriptions } from './gql-querybuilder';
-import { buildSubgraphSchema } from '@apollo/subgraph';
-import { GraphQLSchemaModule } from '@apollo/subgraph/dist/buildSubgraphSchema';
+import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
+
+import { makeExecutableSchema } from '@graphql-tools/schema';
+
+const gaqDefaultScalarsAndInputs = `
+scalar GaqNestedFilterQuery
+
+input GaqSortingParams {
+  "Must a field or nested field of the object queried. In case of nested field, use dot notation."
+  key: String!
+  "Must be 1 or -1"
+  order: Int!
+}
+
+input GaqRootFiltersInput {
+  and: [GaqNestedFilterQuery]
+  or: [GaqNestedFilterQuery]
+  nor: [GaqNestedFilterQuery]
+  "Offset to start the query from. If not there, default offset is 0."
+  offset: Int
+  "Limit the number of results. Is applied after offset"
+  limit: Int
+  "Order of sorting parameters matters. The first sorting parameter will be the primary sort key."
+  sort: [GaqSortingParams]
+}
+`;
 
 /**
  * Extracts all type definitions from a GraphQL schema and returns them as a record.
@@ -162,7 +186,16 @@ export const getAutoSchemaAndResolvers = (
   }
 
   const gaqSchema =
+    gaqDefaultScalarsAndInputs +
     options.autoTypes +
+    gaqResolverDescriptions
+      .map(
+        (resolver) => `type ${resolver.resultType} {
+        result: [${resolver.linkedType}]
+        count: Int
+      }`
+      )
+      .join('\n') +
     `type Query {
     ${gaqResolverDescriptions
       .map(
@@ -186,12 +219,16 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   const autoTypesDefs = gql`
     ${gaqSchema}
   `;
-  const standardGraphqlTypesDefs = gql`
-    ${options.standardGraphqlTypes}
-  `;
-  const typeDefs = mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs]);
-  const gaqResolvers = getResolversFromDescriptions(gaqResolverDescriptions);
+  const standardGraphqlTypesDefs = options.standardGraphqlTypes
+    ? gql`
+        ${options.standardGraphqlTypes}
+      `
+    : null;
+  const typeDefs = standardGraphqlTypesDefs
+    ? mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs])
+    : autoTypesDefs;
 
+  const gaqResolvers = getResolversFromDescriptions(gaqResolverDescriptions);
   const otherResolvers = options.standardApolloResolvers
     ? omit(
         options.standardApolloResolvers as IResolvers<
@@ -202,17 +239,19 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
       )
     : {};
 
-  const schemaInputs = {
-    typeDefs,
-    resolvers: {
-      ...otherResolvers,
-      Query: {
-        ...(options.standardApolloResolvers?.Query ?? {}),
-        ...gaqResolvers.Query,
-      },
+  const resolvers = {
+    ...otherResolvers,
+    GaqNestedFilterQuery: gaqNestedFilterQueryScalar,
+    Query: {
+      ...(options.standardApolloResolvers?.Query ?? {}),
+      ...gaqResolvers.Query,
     },
-  } as GraphQLSchemaModule;
+  };
+
   return {
-    schema: buildSubgraphSchema([schemaInputs]),
+    schema: makeExecutableSchema({
+      typeDefs,
+      resolvers,
+    }),
   };
 };

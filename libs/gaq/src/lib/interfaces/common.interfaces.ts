@@ -4,6 +4,13 @@ import { IResolvers } from '@graphql-tools/utils';
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
 
+export interface GaqLogger {
+  info: (message: any) => void;
+  warn: (message: any) => void;
+  error: (message: any) => void;
+  debug: (message: any) => void;
+}
+
 export interface GaqContext extends BaseContext {
   gaqDbClient: GaqDbClient;
 }
@@ -16,6 +23,7 @@ export type GaqOnlyServerOptions = {
     { Query?: Record<string, any> } & Record<string, any>,
     GaqContext
   >;
+  logger?: GaqLogger;
 };
 
 export type GaqServerOptions = Prettify<

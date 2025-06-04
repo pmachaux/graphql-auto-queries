@@ -5,6 +5,7 @@ import {
 } from '@apollo/server/standalone';
 import {
   GaqContext,
+  GaqDbClient,
   GaqServer,
   GaqServerOptions,
 } from './interfaces/common.interfaces';
@@ -12,11 +13,23 @@ import { omit } from './utils';
 import { getMergedSchemaAndResolvers } from './gql-utils/schema-analyzer';
 import { ListenOptions } from 'net';
 import { WithRequired } from './interfaces/ts-wizard.interface';
+import { getLogger, setLogger } from './logger';
+import { GraphQLSchema } from 'graphql';
 
 export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
   config: GaqServerOptions
 ): GaqServer<TContext> {
-  const schema = getMergedSchemaAndResolvers(config).schema;
+  setLogger(config.logger);
+  const logger = getLogger();
+  logger.info('Creating GraphQL Auto Queries Server...');
+  let schema: GraphQLSchema;
+  try {
+    schema = getMergedSchemaAndResolvers(config).schema;
+  } catch (error) {
+    logger.error('Error creating auto schema and resolvers');
+    logger.error(error);
+    throw error;
+  }
 
   const apolloOnlyConfig = omit(
     config,
@@ -30,74 +43,46 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
     schema,
   } as ApolloServerOptions<TContext>;
 
-  const server = new ApolloServer<TContext>(apolloConfig);
-  (server as GaqServer).startGraphQLAutoQueriesServer = async (
-    options?: StartStandaloneServerOptions<BaseContext> & {
-      listen?: ListenOptions;
-    }
-  ) => {
-    const context = async ({ req, res }): Promise<TContext> => {
-      const apolloContext = await options?.context?.({ req, res });
-      return {
-        ...apolloContext,
-        gaqDbClient: await config.dbConnector.connect(),
-      } as TContext;
+  try {
+    const server = new ApolloServer<TContext>(apolloConfig);
+    (server as GaqServer).startGraphQLAutoQueriesServer = async (
+      options?: StartStandaloneServerOptions<BaseContext> & {
+        listen?: ListenOptions;
+      }
+    ) => {
+      logger.info('Starting GraphQL Auto Queries Server...');
+      let gaqDbClient: GaqDbClient;
+      try {
+        gaqDbClient = await config.dbConnector.connect();
+      } catch (error) {
+        logger.error('Error connecting to database');
+        logger.error(error);
+        throw error;
+      }
+
+      const context = async ({ req, res }): Promise<TContext> => {
+        const apolloContext = await options?.context?.({ req, res });
+        return {
+          ...apolloContext,
+          gaqDbClient,
+        } as unknown as TContext;
+      };
+      const optionsWithGaqContext = {
+        ...options,
+        context,
+      } satisfies WithRequired<
+        StartStandaloneServerOptions<TContext>,
+        'context'
+      > & {
+        listen?: ListenOptions;
+      };
+
+      return startStandaloneServer<TContext>(server, optionsWithGaqContext);
     };
-    const optionsWithGaqContext = {
-      ...options,
-      context,
-    } satisfies WithRequired<
-      StartStandaloneServerOptions<TContext>,
-      'context'
-    > & {
-      listen?: ListenOptions;
-    };
-
-    return startStandaloneServer<TContext>(server, optionsWithGaqContext);
-  };
-  return server as GaqServer<TContext>;
+    return server as GaqServer<TContext>;
+  } catch (error) {
+    logger.error('Error building GraphQL Auto Queries Server');
+    logger.error(error);
+    throw error;
+  }
 }
-
-/* 
-export async function startStandaloneServer(
-  server: ApolloServer<BaseContext>,
-  options?: StartStandaloneServerOptions<BaseContext> & {
-    listen?: ListenOptions;
-  },
-): Promise<{ url: string }>;
-export async function startStandaloneServer<TContext extends BaseContext>(
-  server: ApolloServer<TContext>,
-  options: WithRequired<StartStandaloneServerOptions<TContext>, 'context'> & {
-    listen?: ListenOptions;
-  },
-): Promise<{ url: string }>;
-export async function startStandaloneServer<TContext extends BaseContext>(
-  server: ApolloServer<TContext>,
-  options?: StartStandaloneServerOptions<TContext> & { listen?: ListenOptions },
-): Promise<{ url: string }> {
-  const app: express.Express = express();
-  const httpServer: http.Server = http.createServer(app);
-
-  server.addPlugin(
-    ApolloServerPluginDrainHttpServer({ httpServer: httpServer }),
-  );
-
-  await server.start();
-
-  const context = options?.context ?? (async () => ({}) as TContext);
-  app.use(
-    cors(),
-    express.json({ limit: '50mb' }),
-    expressMiddleware(server, { context }),
-  );
-
-  const listenOptions = options?.listen ?? { port: 4000 };
-  // Wait for server to start listening
-  await new Promise<void>((resolve) => {
-    httpServer.listen(listenOptions, resolve);
-  });
-
-  return { url: urlForHttpServer(httpServer) };
-}
-
-*/

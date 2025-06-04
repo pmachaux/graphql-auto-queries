@@ -23,6 +23,7 @@ import { getResolversFromDescriptions } from './gql-querybuilder';
 import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
 
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { getLogger } from '../logger';
 
 const gaqDefaultScalarsAndInputs = `
 scalar GaqNestedFilterQuery
@@ -167,6 +168,7 @@ export const getAutoResolvers = (
   autoTypes: string
 ): GaqResolverDescription[] => {
   const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
+
   return Object.entries(typeDefinitions).map(([typeName, typeDefinition]) => {
     return {
       queryName: `${typeName.toLowerCase()}GaqQueryResult`,
@@ -179,12 +181,19 @@ export const getAutoResolvers = (
 export const getAutoSchemaAndResolvers = (
   options: Pick<GaqServerOptions, 'autoTypes'>
 ): { gaqSchema: string; gaqResolverDescriptions: GaqResolverDescription[] } => {
+  const logger = getLogger();
+  logger.debug('Building auto resolvers');
   const gaqResolverDescriptions = getAutoResolvers(options.autoTypes);
 
   if (gaqResolverDescriptions.length === 0) {
+    logger.debug('No auto resolvers to build');
     return { gaqSchema: options.autoTypes, gaqResolverDescriptions: [] };
   }
+  logger.debug(
+    `Found ${gaqResolverDescriptions.length} auto resolvers to build`
+  );
 
+  logger.debug('Building auto schema');
   const gaqSchema =
     gaqDefaultScalarsAndInputs +
     options.autoTypes +
@@ -200,11 +209,12 @@ export const getAutoSchemaAndResolvers = (
     ${gaqResolverDescriptions
       .map(
         (resolver) =>
-          `${resolver.queryName}(filters: GaqRootFiltersInput): [${resolver.resultType}]`
+          `${resolver.queryName}(filters: GaqRootFiltersInput): ${resolver.resultType}`
       )
       .join('\n')}
   }`;
 
+  logger.debug('Auto schema built');
   return { gaqSchema, gaqResolverDescriptions };
 };
 
@@ -214,6 +224,7 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     'autoTypes' | 'standardGraphqlTypes' | 'standardApolloResolvers'
   >
 ): Pick<ApolloServerOptions<TContext>, 'schema'> => {
+  const logger = getLogger();
   const { gaqSchema, gaqResolverDescriptions } =
     getAutoSchemaAndResolvers(options);
   const autoTypesDefs = gql`
@@ -227,6 +238,8 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   const typeDefs = standardGraphqlTypesDefs
     ? mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs])
     : autoTypesDefs;
+
+  logger.debug('Merged schema');
 
   const gaqResolvers = getResolversFromDescriptions(gaqResolverDescriptions);
   const otherResolvers = options.standardApolloResolvers
@@ -247,6 +260,8 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
       ...gaqResolvers.Query,
     },
   };
+
+  logger.debug('Auto resolvers built and merged with standard ones');
 
   return {
     schema: makeExecutableSchema({

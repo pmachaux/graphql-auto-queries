@@ -18,6 +18,8 @@ export const pick = <T extends object, K extends keyof T>(
   }, {} as Pick<T, K>);
 };
 
-export const isNullOrEmptyObject = (obj: object | null): boolean => {
-  return obj === null || Object.keys(obj).length === 0;
+export const isNullOrUndefinedOrEmptyObject = (
+  obj: object | null | undefined
+): boolean => {
+  return obj === null || obj === undefined || Object.keys(obj).length === 0;
 };

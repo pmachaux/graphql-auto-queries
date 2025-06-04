@@ -1,0 +1,33 @@
+import * as winston from 'winston';
+import { GaqLogger } from './interfaces/common.interfaces';
+
+const createDefaultLogger = (): GaqLogger => {
+  return winston.createLogger({
+    level: 'debug',
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.timestamp(),
+      winston.format.printf(({ timestamp, level, message }) => {
+        return `[${timestamp}] ${level}: ${message}`;
+      })
+    ),
+    transports: [new winston.transports.Console()],
+  });
+};
+
+let logger!: GaqLogger;
+
+export const setLogger = (gaqLogger: GaqLogger) => {
+  if (logger) {
+    logger.error('Logger already set');
+    throw new Error('Logger already set');
+  }
+  logger = gaqLogger ?? createDefaultLogger();
+};
+
+export const getLogger = (): GaqLogger => {
+  if (!logger) {
+    throw new Error('Logger not set');
+  }
+  return logger;
+};

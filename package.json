@@ -36,11 +36,13 @@
     "jsonc-eslint-parser": "^2.1.0",
     "nx": "21.1.2",
     "prettier": "^2.6.2",
+    "supertest": "^7.1.1",
     "ts-jest": "^29.1.0",
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",
     "typescript": "~5.7.2",
-    "typescript-eslint": "^8.19.0"
+    "typescript-eslint": "^8.19.0",
+    "winston": "^3.17.0"
   },
   "nx": {},
   "dependencies": {
@@ -52,7 +54,6 @@
     "@types/supertest": "^6.0.3",
     "axios": "^1.6.0",
     "graphql": "^16.11.0",
-    "graphql-tag": "^2.12.6",
-    "supertest": "^7.1.1"
+    "graphql-tag": "^2.12.6"
   }
 }

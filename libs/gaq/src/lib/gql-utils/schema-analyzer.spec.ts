@@ -48,10 +48,10 @@ describe('schema-analyzer', () => {
 
       expect(gaqSchema).toContain('type Query {');
       expect(gaqSchema).toContain(
-        'bookGaqQueryResult(filters: GaqRootFiltersInput): [BookGaqResult]'
+        'bookGaqQueryResult(filters: GaqRootFiltersInput): BookGaqResult'
       );
       expect(gaqSchema).toContain(
-        'authorGaqQueryResult(filters: GaqRootFiltersInput): [AuthorGaqResult]'
+        'authorGaqQueryResult(filters: GaqRootFiltersInput): AuthorGaqResult'
       );
 
       expect(gaqSchema).toContain(options.autoTypes);

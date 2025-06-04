@@ -2,23 +2,50 @@ import type { ISchemaLevelResolver } from '@graphql-tools/utils';
 import type {
   GaqContext,
   GaqResolverDescription,
+  GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
-import { isNullOrEmptyObject } from '../utils';
+import { isNullOrUndefinedOrEmptyObject } from '../utils';
+import { getLogger } from '../logger';
+import { GaqErrorCodes } from '../interfaces/gaq-errors.interface';
 
-type GaqSchemaLevelResolver = ISchemaLevelResolver<any, any, GaqContext, any>;
+type GaqSchemaLevelResolver = ISchemaLevelResolver<
+  any,
+  GaqContext,
+  { filters: GaqRootQueryFilter<any> },
+  any
+>;
 
 const getStandardResolver = (linkedType: string): GaqSchemaLevelResolver => {
+  const logger = getLogger();
   const standardResolver: GaqSchemaLevelResolver = (
     parent: any,
-    args: any,
+    args: { filters: GaqRootQueryFilter<any> },
     contextValue: GaqContext,
     info: any
   ) => {
+    logger.debug(`Getting standard resolver for ${linkedType}`);
     const collectionClient = contextValue.gaqDbClient.collection(linkedType);
-    if (!collectionClient || !isNullOrEmptyObject(parent)) {
+    if (!collectionClient || !isNullOrUndefinedOrEmptyObject(parent)) {
+      logger.debug(`No collection client or parent found for ${linkedType}`);
       return null;
     }
-    return collectionClient.get(args.filter);
+    logger.debug(`Getting data for ${linkedType}`);
+
+    return collectionClient
+      .get(args.filters)
+      .then((data) => {
+        logger.debug(
+          `Data for ${linkedType} fetched, returning ${data.length} items`
+        );
+        return {
+          result: data,
+          count: data.length,
+        };
+      })
+      .catch((error) => {
+        logger.error(`Error fetching data for ${linkedType}: ${error}`);
+        throw new Error(GaqErrorCodes.INTERNAL_SERVER_ERROR);
+      });
   };
 
   return standardResolver;

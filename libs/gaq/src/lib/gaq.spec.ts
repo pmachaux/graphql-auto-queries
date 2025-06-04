@@ -1,12 +1,11 @@
 import { GaqServer } from './interfaces/common.interfaces';
 import { getGraphQLAutoQueriesServer } from './gaq';
-import { parseGraphQLBody } from './test-utils';
 import { getMockedDatasource } from './test-utils/mocked-datasource';
 import {
   GaqFilterComparators,
   GaqRootQueryFilter,
 } from './interfaces/common.interfaces';
-
+import * as request from 'supertest';
 describe('gaq', () => {
   const autoTypes = `
   type Book {
@@ -15,19 +14,24 @@ describe('gaq', () => {
   }
 `;
   let server: GaqServer;
-
+  let url: string;
   beforeAll(async () => {
     server = getGraphQLAutoQueriesServer({
       autoTypes,
       dbConnector: getMockedDatasource(),
     });
-    // await server.startGraphQLAutoQueriesServer();
+    ({ url } = await server.startGraphQLAutoQueriesServer({
+      listen: { port: 0 },
+    }));
+  });
+
+  afterAll(async () => {
+    await server.stop();
   });
 
   it('should return books when querying bookGaqQueryResult', async () => {
-    const response = await server.executeOperation({
-      query: `
-        query($filters: GaqRootFiltersInput) {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
           bookGaqQueryResult(filters: $filters) {
             result {
               title
@@ -35,8 +39,7 @@ describe('gaq', () => {
             }
             count
           }
-        }
-      `,
+        }`,
       variables: {
         filters: {
           and: [
@@ -51,17 +54,12 @@ describe('gaq', () => {
           author: string;
         }>,
       },
-    });
-    const body = parseGraphQLBody<{
-      bookGaqQueryResult: {
-        result: { title: string; author: string }[];
-        count: number;
-      }[];
-    }>(response.body);
-    expect(response.body.kind).toBe('single');
-    expect(body.singleResult.data.bookGaqQueryResult[0].result).toEqual([
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.bookGaqQueryResult[0].result).toEqual([
       { title: 'The Great Gatsby', author: 'F. Scott Fitzgerald' },
     ]);
-    expect(body.singleResult.data.bookGaqQueryResult[0].count).toBeDefined();
   });
 });

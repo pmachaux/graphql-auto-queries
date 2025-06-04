@@ -1,9 +1,5 @@
 import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
-import {
-  LooseAutocomplete,
-  Prettify,
-  WithRequired,
-} from './ts-wizard.interface';
+import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
 import { IResolvers } from '@graphql-tools/utils';
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
@@ -29,10 +25,7 @@ export type GaqServerOptions = Prettify<
 export type GaqServer<TContext extends GaqContext = GaqContext> =
   ApolloServer<TContext> & {
     startGraphQLAutoQueriesServer: (
-      options?: WithRequired<
-        StartStandaloneServerOptions<TContext>,
-        'context'
-      > & {
+      options?: StartStandaloneServerOptions<TContext> & {
         listen?: ListenOptions;
       }
     ) => Promise<{ url: string }>;

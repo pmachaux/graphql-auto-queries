@@ -55,7 +55,6 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
 
     return startStandaloneServer<TContext>(server, optionsWithGaqContext);
   };
-
   return server as GaqServer<TContext>;
 }
 

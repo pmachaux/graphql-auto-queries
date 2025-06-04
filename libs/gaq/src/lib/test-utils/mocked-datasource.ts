@@ -6,9 +6,15 @@ import {
 } from '../interfaces/common.interfaces';
 
 const books = [
-  { title: 'The Great Gatsby', author: 'F. Scott Fitzgerald' },
-  { title: 'To Kill a Mockingbird', author: 'Harper Lee' },
-  { title: '1984', author: 'George Orwell' },
+  { title: 'The Great Gatsby', authorId: '1' },
+  { title: 'To Kill a Mockingbird', authorId: '2' },
+  { title: '1984', authorId: '3' },
+];
+
+const authors = [
+  { id: '1', name: 'F. Scott Fitzgerald' },
+  { id: '2', name: 'Harper Lee' },
+  { id: '3', name: 'George Orwell' },
 ];
 
 export const getMockedDatasource = (): GaqDbConnector => {

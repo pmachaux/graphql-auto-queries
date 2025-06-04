@@ -10,7 +10,13 @@ describe('gaq', () => {
   const autoTypes = `
   type Book {
     title: String
-    author: String
+    authorId: String
+    author: Author
+  }
+  type Author {
+    id: String
+    name: String
+    books: [Book]
   }
 `;
   let server: GaqServer;
@@ -35,7 +41,7 @@ describe('gaq', () => {
           bookGaqQueryResult(filters: $filters) {
             result {
               title
-              author
+              authorId
             }
             count
           }
@@ -59,7 +65,7 @@ describe('gaq', () => {
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
       title: 'The Great Gatsby',
-      author: 'F. Scott Fitzgerald',
+      authorId: '1',
     });
   });
 });

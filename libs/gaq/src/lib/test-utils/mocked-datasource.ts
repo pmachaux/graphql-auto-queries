@@ -1,5 +1,4 @@
 import {
-  GaqDbClient,
   GaqDbConnector,
   GaqFilterQuery,
   GaqRootQueryFilter,
@@ -22,23 +21,43 @@ export const getMockedDatasource = (): GaqDbConnector => {
     connect: async () => {
       return {
         collection: (collectionName: string) => {
-          return {
-            get: async (
-              filters: GaqRootQueryFilter<{ title: string; author: string }>
-            ) => {
-              return books.filter((book) => {
-                return (
-                  book.title ===
-                  (
-                    filters.and[0] as GaqFilterQuery<
-                      { title: string; author: string },
-                      'title'
-                    >
-                  ).value
+          if (collectionName === 'Book') {
+            return {
+              get: async (
+                filters: GaqRootQueryFilter<{ title: string; author: string }>
+              ) => {
+                return books.filter((book) => {
+                  return (
+                    book.title ===
+                    (
+                      filters.and[0] as GaqFilterQuery<
+                        { title: string; author: string },
+                        'title'
+                      >
+                    ).value
+                  );
+                });
+              },
+            };
+          }
+          if (collectionName === 'Author') {
+            return {
+              get: async (
+                filters: GaqRootQueryFilter<{ id: string; name: string }>
+              ) => {
+                return authors.filter(
+                  (a) =>
+                    a.id ===
+                    (
+                      filters.and[0] as GaqFilterQuery<
+                        { id: string; name: string },
+                        'id'
+                      >
+                    ).value
                 );
-              });
-            },
-          };
+              },
+            };
+          }
         },
       };
     },

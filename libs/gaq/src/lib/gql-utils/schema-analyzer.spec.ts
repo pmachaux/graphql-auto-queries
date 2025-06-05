@@ -35,7 +35,7 @@ describe('schema-analyzer', () => {
         },
       ]);
 
-      expect(gaqSchema).toContain(`scalar GaqRootFiltersInput`);
+      expect(gaqSchema).toContain(`scalar GaqNestedFilterQuery`);
       expect(gaqSchema).toContain(`type BookGaqResult {
         result: [Book]
         count: Int

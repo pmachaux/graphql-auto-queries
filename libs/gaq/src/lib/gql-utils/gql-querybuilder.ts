@@ -23,6 +23,10 @@ const getStandardResolver = (linkedType: string): GaqSchemaLevelResolver => {
     contextValue: GaqContext,
     info: any
   ) => {
+    // logger.debug(`Parent: ${JSON.stringify(parent)}`);
+    // logger.debug(`Args: ${JSON.stringify(args)}`);
+    // logger.debug(`Context value: ${JSON.stringify(contextValue)}`);
+    // logger.debug(`Info: ${JSON.stringify(info)}`);
     logger.debug(`Getting standard resolver for ${linkedType}`);
     const collectionClient = contextValue.gaqDbClient.collection(linkedType);
     if (!collectionClient || !isNullOrUndefinedOrEmptyObject(parent)) {

@@ -62,6 +62,7 @@ describe('gaq', () => {
       },
     };
     const response = await request(url).post('/').send(queryData);
+
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
       title: 'The Great Gatsby',

@@ -27,7 +27,7 @@ describe('getResolversFromDescriptions', () => {
     const bookResolver = resolvers.Query.bookGaqQueryResult;
     const result = bookResolver(null, { filter: {} } as any, mockContext, null);
     expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('Book');
-    expect(result).resolves.toEqual([]);
+    expect(result).resolves.toEqual({ count: 0, result: [] });
   });
 
   it('should return null when parent is not null', () => {

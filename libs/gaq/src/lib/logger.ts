@@ -27,7 +27,8 @@ export const setLogger = (gaqLogger: GaqLogger) => {
 
 export const getLogger = (): GaqLogger => {
   if (!logger) {
-    throw new Error('Logger not set');
+    logger = createDefaultLogger();
+    logger.warn('Logger not set, using default logger');
   }
   return logger;
 };

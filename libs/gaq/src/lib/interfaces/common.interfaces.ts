@@ -1,6 +1,6 @@
 import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
 import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
-import { IResolvers } from '@graphql-tools/utils';
+import { IResolvers, ISchemaLevelResolver } from '@graphql-tools/utils';
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
 
@@ -39,14 +39,24 @@ export type GaqServer<TContext extends GaqContext = GaqContext> =
     ) => Promise<{ url: string }>;
   };
 
+export type GaqFieldResolverArguments = { parentKey: string; fieldKey: string };
+export type GaqFieldResolverDescription = Prettify<
+  GaqFieldResolverArguments & {
+    isArray: boolean;
+    fieldType: string;
+    fieldName: string;
+  }
+>;
+
 export interface GaqResolverDescription {
   queryName: string;
   resultType: string;
   linkedType: string;
+  fieldResolvers: GaqFieldResolverDescription[];
 }
 
 export interface DetailedGaqFieldDefinition {
-  resolveField: boolean;
+  fieldResolver: GaqFieldResolverArguments | null;
   isArray: boolean;
   type: string;
 }
@@ -67,6 +77,14 @@ export interface GaqResolverFn<T extends object> {
   >;
 }
 
+export type GaqSchemaLevelResolver<TParent extends object = object> =
+  ISchemaLevelResolver<
+    TParent,
+    GaqContext,
+    { filters: GaqRootQueryFilter<TParent> },
+    any
+  >;
+
 /**************************************************
  **********  Database adapter interfaces  **********
  **************************************************/
@@ -77,10 +95,14 @@ export type GaqDbQueryOptions = {
 };
 
 export interface GaqCollectionClient<T extends object> {
-  get(
+  getFromGaqFilters(
     filters?: GaqRootQueryFilter<T> | undefined,
     opts?: { traceId?: string } & GaqDbQueryOptions
   ): Promise<Array<T>>;
+  getByField(
+    payload: { field: string; value: any },
+    opts?: { traceId?: string } & GaqDbQueryOptions
+  ): Promise<T[]>;
 }
 
 export interface GaqDbClient {

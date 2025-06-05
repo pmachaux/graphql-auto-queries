@@ -10,11 +10,7 @@ describe('schema-analyzer', () => {
         autoTypes: `
         type Book {
           title: String
-          author: Author
-        }
-        type Author {
-          name: String
-          books: [Book]
+          authorId: String
         }
       `,
       };
@@ -27,11 +23,7 @@ describe('schema-analyzer', () => {
           queryName: 'bookGaqQueryResult',
           resultType: 'BookGaqResult',
           linkedType: 'Book',
-        },
-        {
-          queryName: 'authorGaqQueryResult',
-          resultType: 'AuthorGaqResult',
-          linkedType: 'Author',
+          fieldResolvers: [],
         },
       ]);
 
@@ -41,20 +33,97 @@ describe('schema-analyzer', () => {
         count: Int
       }`);
 
-      expect(gaqSchema).toContain(`type AuthorGaqResult {
-        result: [Author]
-        count: Int
-      }`);
-
       expect(gaqSchema).toContain('type Query {');
       expect(gaqSchema).toContain(
         'bookGaqQueryResult(filters: GaqRootFiltersInput): BookGaqResult'
       );
-      expect(gaqSchema).toContain(
-        'authorGaqQueryResult(filters: GaqRootFiltersInput): AuthorGaqResult'
-      );
 
       expect(gaqSchema).toContain(options.autoTypes);
+    });
+    it('should generate schema and resolvers from auto types with field resolvers', () => {
+      const options = {
+        autoTypes: `
+        type Book {
+          title: String
+          authorId: String
+          author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
+        }
+        type Author {
+          id: String
+          name: String
+        }
+      `,
+      };
+
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      console.log('gaqResolverDescriptions', gaqResolverDescriptions);
+      expect(gaqResolverDescriptions[0]).toEqual({
+        queryName: 'bookGaqQueryResult',
+        resultType: 'BookGaqResult',
+        linkedType: 'Book',
+        fieldResolvers: [
+          {
+            parentKey: 'authorId',
+            fieldKey: 'id',
+            isArray: false,
+            fieldType: 'Author',
+            fieldName: 'author',
+          },
+        ],
+      });
+      expect(gaqResolverDescriptions[1]).toEqual({
+        queryName: 'authorGaqQueryResult',
+        resultType: 'AuthorGaqResult',
+        linkedType: 'Author',
+        fieldResolvers: [],
+      });
+    });
+    it('should generate schema and resolvers from auto types with field resolvers and array fields', () => {
+      const options = {
+        autoTypes: `
+        type Book {
+          id: ID
+          title: String
+          reviews: [Review] @fieldResolver(parentKey: "id", fieldKey: "bookId")
+        }
+        type Review {
+          id: String
+          bookId: String
+          book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
+        }
+      `,
+      };
+
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+
+      expect(gaqResolverDescriptions[0]).toEqual({
+        queryName: 'bookGaqQueryResult',
+        resultType: 'BookGaqResult',
+        linkedType: 'Book',
+        fieldResolvers: [
+          {
+            parentKey: 'id',
+            fieldKey: 'bookId',
+            isArray: true,
+            fieldType: 'Review',
+            fieldName: 'reviews',
+          },
+        ],
+      });
+      expect(gaqResolverDescriptions[1]).toEqual({
+        queryName: 'reviewGaqQueryResult',
+        resultType: 'ReviewGaqResult',
+        linkedType: 'Review',
+        fieldResolvers: [
+          {
+            parentKey: 'bookId',
+            fieldKey: 'id',
+            isArray: false,
+            fieldType: 'Book',
+            fieldName: 'book',
+          },
+        ],
+      });
     });
 
     it('should handle empty auto types', () => {
@@ -100,7 +169,11 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Book: {
-          title: { resolveField: false, isArray: false, type: 'String' },
+          title: {
+            fieldResolver: null,
+            isArray: false,
+            type: 'String',
+          },
         },
       });
     });
@@ -108,13 +181,10 @@ describe('schema-analyzer', () => {
       const schema = `
         type Book {
           title: String!
-          author: Author
           tags: [String!]!
-          reviews: [Review]
         }
         type Author {
           name: String!
-          books: [Book!]!
         }
         type Review {
           rating: Int!
@@ -125,18 +195,19 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Book: {
-          title: { resolveField: false, isArray: false, type: 'String' },
-          author: { resolveField: true, isArray: false, type: 'Author' },
-          tags: { resolveField: false, isArray: true, type: 'String' },
-          reviews: { resolveField: true, isArray: true, type: 'Review' },
+          title: {
+            fieldResolver: null,
+            isArray: false,
+            type: 'String',
+          },
+          tags: { fieldResolver: null, isArray: true, type: 'String' },
         },
         Author: {
-          name: { resolveField: false, isArray: false, type: 'String' },
-          books: { resolveField: true, isArray: true, type: 'Book' },
+          name: { fieldResolver: null, isArray: false, type: 'String' },
         },
         Review: {
-          rating: { resolveField: false, isArray: false, type: 'Int' },
-          comment: { resolveField: false, isArray: false, type: 'String' },
+          rating: { fieldResolver: null, isArray: false, type: 'Int' },
+          comment: { fieldResolver: null, isArray: false, type: 'String' },
         },
       });
     });
@@ -151,7 +222,7 @@ describe('schema-analyzer', () => {
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Matrix: {
-          values: { resolveField: false, isArray: true, type: 'Int' },
+          values: { fieldResolver: null, isArray: true, type: 'Int' },
         },
       });
     });
@@ -161,35 +232,53 @@ describe('schema-analyzer', () => {
         type Post {
           title: String!
           content: String
-        }
-        type Comment {
-          text: String!
-        }
-
-        type User {
-          id: ID!
-          name: String
-          email: String!
-          posts: [Post!]
-          comments: [Comment]!
+          comments: [String!]!
         }
       `;
 
       const types = extractAllTypesDefinitionsFromSchema(schema);
       expect(types).toEqual({
         Post: {
-          title: { resolveField: false, isArray: false, type: 'String' },
-          content: { resolveField: false, isArray: false, type: 'String' },
+          title: { fieldResolver: null, isArray: false, type: 'String' },
+          content: { fieldResolver: null, isArray: false, type: 'String' },
+          comments: { fieldResolver: null, isArray: true, type: 'String' },
         },
-        Comment: {
-          text: { resolveField: false, isArray: false, type: 'String' },
+      });
+    });
+    it('should be able to populate fieldResolver when @fieldResolver directive is present', () => {
+      const schema = `
+        type Book {
+          id: ID
+          title: String
+          authorId: String
+          author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
+          reviews: [Review] @fieldResolver(parentKey: "id", fieldKey: "bookId")
+        }
+        type Author {
+          id: String
+          name: String
+        }
+        type Review {
+          id: ID
+          bookId: ID
+          rating: Int
+          comment: String
+        }
+      `;
+      const types = extractAllTypesDefinitionsFromSchema(schema);
+      expect(types.Book).toEqual({
+        id: { fieldResolver: null, isArray: false, type: 'ID' },
+        title: { fieldResolver: null, isArray: false, type: 'String' },
+        authorId: { fieldResolver: null, isArray: false, type: 'String' },
+        author: {
+          fieldResolver: { parentKey: 'authorId', fieldKey: 'id' },
+          isArray: false,
+          type: 'Author',
         },
-        User: {
-          id: { resolveField: false, isArray: false, type: 'ID' },
-          name: { resolveField: false, isArray: false, type: 'String' },
-          email: { resolveField: false, isArray: false, type: 'String' },
-          posts: { resolveField: true, isArray: true, type: 'Post' },
-          comments: { resolveField: true, isArray: true, type: 'Comment' },
+        reviews: {
+          fieldResolver: { parentKey: 'id', fieldKey: 'bookId' },
+          isArray: true,
+          type: 'Review',
         },
       });
     });

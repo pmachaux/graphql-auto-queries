@@ -6,27 +6,37 @@ import {
   DefinitionNode,
   FieldDefinitionNode,
   TypeNode,
+  StringValueNode,
 } from 'graphql';
 import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
   GaqContext,
+  GaqFieldResolverDescription,
   GaqResolverDescription,
   GaqServerOptions,
 } from '../interfaces/common.interfaces';
 import gql from 'graphql-tag';
 import { mergeTypeDefs } from '@graphql-tools/merge';
 import { ApolloServerOptions } from '@apollo/server';
-import { omit } from '../utils';
-import { IResolvers } from '@graphql-tools/utils';
-import { getResolversFromDescriptions } from './gql-querybuilder';
-import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
+import { generateResolvers } from './resolver-builder';
 
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
 
 const gaqDefaultScalarsAndInputs = `
+# Gaq custom scalar
 scalar GaqNestedFilterQuery
+
+# Gaq custom directive
+directive @fieldResolver (
+  parentKey: String!
+  fieldKey: String!
+) on FIELD_DEFINITION
+
+directive @dbCollection(
+  collectionName: String!
+) on OBJECT
 
 input GaqSortingParams {
   "Must a field or nested field of the object queried. In case of nested field, use dot notation."
@@ -91,29 +101,19 @@ export function extractAllTypesDefinitionsFromSchema(
   // Parse the schema string into a DocumentNode
   const document = parse(schemaString);
   const typeDefinitions = getObjectTypesDefinitionsFromDocumentNode(document);
-  const typesDefinitionsMap = new Map<string, ObjectTypeDefinitionNode>(
-    typeDefinitions.map((def) => [def.name.value, def])
-  );
 
   return typeDefinitions.reduce((acc, def) => {
-    acc[def.name.value] = extractDetailedGaqFieldDefinitions(
-      def.fields,
-      typesDefinitionsMap
-    );
+    acc[def.name.value] = extractDetailedGaqFieldDefinitions(def.fields);
     return acc;
   }, {});
 }
 
 function extractDetailedGaqFieldDefinitions(
-  fields: readonly FieldDefinitionNode[],
-  objectTypeDefinitions: Map<string, ObjectTypeDefinitionNode>
+  fields: readonly FieldDefinitionNode[]
 ): Record<string, DetailedGaqFieldDefinition> {
   return fields.reduce<Record<string, DetailedGaqFieldDefinition>>(
     (acc, field) => {
-      acc[field.name.value] = extractFieldDefinition(
-        field,
-        objectTypeDefinitions
-      );
+      acc[field.name.value] = extractFieldDefinition(field);
       return acc;
     },
     {}
@@ -121,13 +121,38 @@ function extractDetailedGaqFieldDefinitions(
 }
 
 function extractFieldDefinition(
-  field: FieldDefinitionNode,
-  objectTypeDefinitions: Map<string, ObjectTypeDefinitionNode>
+  field: FieldDefinitionNode
 ): DetailedGaqFieldDefinition {
   const typeName = extractTypeFromNestedType(field.type);
 
+  let fieldResolver: { parentKey: string; fieldKey: string } | null = null;
+  const fieldResolverDirective = field.directives?.find(
+    (directive) => directive.name.value === 'fieldResolver'
+  );
+  if (fieldResolverDirective) {
+    const parentKeyArgument = fieldResolverDirective.arguments?.find(
+      (arg) => arg.name.value === 'parentKey'
+    )?.value;
+    if (!parentKeyArgument) {
+      throw new Error(
+        'parentKey argument is required on directive @fieldResolver'
+      );
+    }
+    const parentKey = (parentKeyArgument as StringValueNode).value;
+
+    const fieldKeyArgument = fieldResolverDirective.arguments?.find(
+      (arg) => arg.name.value === 'fieldKey'
+    )?.value;
+    if (!fieldKeyArgument) {
+      throw new Error(
+        'fieldKey argument is required on directive @fieldResolver'
+      );
+    }
+    const fieldKey = (fieldKeyArgument as StringValueNode).value;
+    fieldResolver = { parentKey, fieldKey };
+  }
   return {
-    resolveField: objectTypeDefinitions.get(typeName) !== undefined,
+    fieldResolver,
     isArray: isArrayType(field.type),
     type: typeName,
   };
@@ -170,10 +195,26 @@ export const getAutoResolvers = (
   const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
 
   return Object.entries(typeDefinitions).map(([typeName, typeDefinition]) => {
+    const propertiesToResolve = Object.entries(typeDefinition)
+      .filter(([_, fieldDefinition]) => fieldDefinition.fieldResolver)
+      .map(([fieldName, fieldDefinition]) => ({
+        name: fieldName,
+        definition: fieldDefinition as DetailedGaqFieldDefinition,
+      }));
+    const fieldResolvers = propertiesToResolve.map((propertyToResolve) => {
+      return {
+        parentKey: propertyToResolve.definition.fieldResolver.parentKey,
+        fieldKey: propertyToResolve.definition.fieldResolver.fieldKey,
+        isArray: propertyToResolve.definition.isArray,
+        fieldType: propertyToResolve.definition.type,
+        fieldName: propertyToResolve.name,
+      } satisfies GaqFieldResolverDescription;
+    });
     return {
       queryName: `${typeName.toLowerCase()}GaqQueryResult`,
       resultType: `${typeName}GaqResult`,
       linkedType: typeName,
+      fieldResolvers,
     } satisfies GaqResolverDescription;
   });
 };
@@ -240,27 +281,10 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     : autoTypesDefs;
 
   logger.debug('Merged schema');
-
-  const gaqResolvers = getResolversFromDescriptions(gaqResolverDescriptions);
-  const otherResolvers = options.standardApolloResolvers
-    ? omit(
-        options.standardApolloResolvers as IResolvers<
-          { Query?: Record<string, any> },
-          TContext
-        >,
-        'Query'
-      )
-    : {};
-
-  const resolvers = {
-    ...otherResolvers,
-    GaqNestedFilterQuery: gaqNestedFilterQueryScalar,
-    Query: {
-      ...(options.standardApolloResolvers?.Query ?? {}),
-      ...gaqResolvers.Query,
-    },
-  };
-
+  const resolvers = generateResolvers<TContext>({
+    gaqResolverDescriptions,
+    standardApolloResolvers: options.standardApolloResolvers,
+  });
   logger.debug('Auto resolvers built and merged with standard ones');
 
   return {

@@ -8,17 +8,26 @@ import {
 import * as request from 'supertest';
 describe('gaq', () => {
   const autoTypes = `
-  @dbCollection(collectionName: "books")
-  type Book {
+
+  type Book @dbCollection(collectionName: "books"){
+    id: ID
     title: String
     authorId: String
     author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
+    reviews: [Review] @fieldResolver(parentKey: "id", fieldKey: "bookId")
   }
-  @dbCollection(collectionName: "authors")
-  type Author {
-    id: String
+ 
+  type Author @dbCollection(collectionName: "authors"){
+    id: ID
     name: String
     books: [Book]
+  }
+
+  type Review @dbCollection(collectionName: "reviews"){
+    id: ID
+    content: String
+    bookId: String
+    book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
   }
 `;
   let server: GaqServer;
@@ -77,6 +86,7 @@ describe('gaq', () => {
           bookGaqQueryResult(filters: $filters) {
             result {
               title
+              authorId
               author {
                 name
               }
@@ -107,6 +117,43 @@ describe('gaq', () => {
       author: {
         name: 'F. Scott Fitzgerald',
       },
+    });
+  });
+  it('should be able to resolve fields that are arrays', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
+          bookGaqQueryResult(filters: $filters) {
+            result {
+              title
+              id
+              reviews {
+                id
+                content
+              }
+            }
+          }
+        }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'title',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'The Great Gatsby',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
+      title: 'The Great Gatsby',
+      id: '1',
+      reviews: [
+        { id: '1', content: 'Great book' },
+        { id: '2', content: 'I loved it' },
+      ],
     });
   });
 });

@@ -73,7 +73,7 @@ const getFieldResolver = (
     );
     const collectionClient =
       contextValue.gaqDbClient.collection(collectionName);
-    if (!collectionClient || !isNullOrUndefinedOrEmptyObject(parent)) {
+    if (!collectionClient || isNullOrUndefinedOrEmptyObject(parent)) {
       logger.debug(`No collection client found for ${collectionName}`);
       return fieldResolverDescription.isArray ? [] : null;
     }
@@ -87,7 +87,13 @@ const getFieldResolver = (
         logger.debug(
           `Data for ${fieldResolverDescription.fieldName} fetched, returning ${data.length} items`
         );
-        return data;
+        if (fieldResolverDescription.isArray) {
+          return data;
+        }
+        if (data.length === 0) {
+          return null;
+        }
+        return data[0];
       })
       .catch((error) => {
         logger.error(
@@ -100,30 +106,63 @@ const getFieldResolver = (
   return fieldResolver;
 };
 
+const getQueryAndFieldResolver = (
+  resolverDescription: GaqResolverDescription
+) => {
+  const queryResolver = {
+    [resolverDescription.queryName]: getStandardResolver(
+      resolverDescription.linkedType
+    ),
+  };
+
+  const fieldResolversForLinkedType: Record<string, GaqSchemaLevelResolver> =
+    {};
+  resolverDescription.fieldResolvers.forEach((fieldResolver) => {
+    fieldResolversForLinkedType[fieldResolver.fieldName] =
+      getFieldResolver(fieldResolver);
+  });
+  if (isNullOrUndefinedOrEmptyObject(fieldResolversForLinkedType)) {
+    return {
+      queryResolver,
+    };
+  }
+  return {
+    queryResolver,
+    fieldResolvers: {
+      [resolverDescription.linkedType]: fieldResolversForLinkedType,
+    },
+  };
+};
+
+type GetResolversFromDescriptionsOutput = {
+  Query: Record<string, GaqSchemaLevelResolver>;
+} & Record<string, Record<string, GaqSchemaLevelResolver>>;
 export const getResolversFromDescriptions = (
   gaqResolverDescriptions: GaqResolverDescription[]
-): {
-  Query: Record<string, GaqSchemaLevelResolver>;
-} => {
-  const resolvers = gaqResolverDescriptions.reduce<
-    Record<string, GaqSchemaLevelResolver>
-  >((acc, resolverDescription) => {
-    const fieldResolvers: Record<string, GaqSchemaLevelResolver> = {};
-    resolverDescription.fieldResolvers.forEach((fieldResolver) => {
-      fieldResolvers[fieldResolver.fieldName] = getFieldResolver(fieldResolver);
-    });
-    return {
-      ...acc,
-      [resolverDescription.queryName]: getStandardResolver(
-        resolverDescription.linkedType
-      ),
-      ...fieldResolvers,
-    };
-  }, {});
+): GetResolversFromDescriptionsOutput => {
+  const resolvers = gaqResolverDescriptions.map(getQueryAndFieldResolver);
 
-  return {
-    Query: resolvers,
-  };
+  return resolvers.reduce<GetResolversFromDescriptionsOutput>(
+    (acc, resolver) => {
+      const Query = {
+        ...acc.Query,
+        ...resolver.queryResolver,
+      };
+
+      if (isNullOrUndefinedOrEmptyObject(resolver.fieldResolvers)) {
+        return {
+          ...acc,
+          Query,
+        };
+      }
+      return {
+        ...acc,
+        Query,
+        ...resolver.fieldResolvers,
+      };
+    },
+    { Query: {} }
+  );
 };
 
 export const generateResolvers = <TContext extends GaqContext>({
@@ -158,6 +197,7 @@ export const generateResolvers = <TContext extends GaqContext>({
       ...(standardApolloResolvers?.Query ?? {}),
       ...gaqResolvers.Query,
     },
+    ...omit(gaqResolvers, 'Query'),
   };
   return resolvers;
 };

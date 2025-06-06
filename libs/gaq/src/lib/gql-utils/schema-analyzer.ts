@@ -7,6 +7,7 @@ import {
   FieldDefinitionNode,
   TypeNode,
   StringValueNode,
+  visit,
 } from 'graphql';
 import {
   DetailedGaqFieldDefinition,
@@ -59,53 +60,80 @@ input GaqRootFiltersInput {
 `;
 
 /**
- * Extracts all type definitions from a GraphQL schema and returns them as a record.
- * Each type is represented as a record where the keys are field names and the values are field types.
+ * Extracts all type definitions from a GraphQL schema string and converts them into a detailed type definition format.
  *
- * @param {string} schemaString - The GraphQL schema as a string
- * @returns {Record<string, Record<string, string>>} A record where:
- *   - Keys are type names (e.g., 'Book', 'Author')
- *   - The value is an object with two properties:
- *     - `plainProperties`: an array of the type's plain properties (e.g., ['title', 'author'])
- *     - `references`: an array of the type's references (e.g., ['Book'])
+ * This function parses a GraphQL schema string and extracts all object type definitions, excluding Query and Mutation types.
+ * For each type, it processes its fields and their directives to create a detailed type definition that includes:
+ * - Field types
+ * - Array information
+ * - Field resolver information (if @fieldResolver directive is present)
+ *
+ * @param schemaString - The GraphQL schema string to parse and analyze
+ * @returns A record mapping type names to their detailed definitions, where each definition contains:
+ *          - name: The type name
+ *          - properties: A record of field definitions, each containing:
+ *            - fieldResolver: Information about field resolution (if applicable)
+ *            - isArray: Whether the field is an array type
+ *            - type: The base type of the field
+ *          - dbCollectionName: The database collection name (from @dbCollection directive)
+ *
  * @example
- *
- * // For schema:
- * type Book {
- *   title: String
- *   author: Author
- * }
- * type Author {
- *   name: String
- *   books: [Book]
- * }
- *
+ * ```typescript
+ * const schema = `
+ *   type Book @dbCollection(collectionName: "books") {
+ *     title: String
+ *     author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
+ *   }
+ * `;
+ * const types = extractAllTypesDefinitionsFromSchema(schema);
  * // Returns:
- * {
- *   Book: {
- *     title: { resolveField: false, isArray: false },
- *     author: { resolveField: true, isArray: false },
- *   },
- *   Author: {
- *     name: { resolveField: false, isArray: false },
- *     books: { resolveField: false, isArray: true },
- *   },
- * }
+ * // {
+ * //   Book: {
+ * //     title: { fieldResolver: null, isArray: false, type: "String" },
+ * //     author: {
+ * //       fieldResolver: { parentKey: "authorId", fieldKey: "id" },
+ * //       isArray: false,
+ * //       type: "Author"
+ * //     }
+ * //   }
+ * // }
+ * ```
  */
-export function extractAllTypesDefinitionsFromSchema(
+
+function extractAllTypesDefinitionsFromSchema(
   schemaString: string
-): Record<string, DetailedGaqTypeDefinition> {
+): DetailedGaqTypeDefinition[] {
   if (!schemaString) {
-    return {};
+    return [];
   }
   // Parse the schema string into a DocumentNode
   const document = parse(schemaString);
   const typeDefinitions = getObjectTypesDefinitionsFromDocumentNode(document);
 
-  return typeDefinitions.reduce((acc, def) => {
-    acc[def.name.value] = extractDetailedGaqFieldDefinitions(def.fields);
-    return acc;
-  }, {});
+  return typeDefinitions.map((def) => {
+    const dbCollectionDirective = def.directives?.find(
+      (directive) => directive.name.value === 'dbCollection'
+    );
+    if (!dbCollectionDirective) {
+      throw new Error(
+        `@dbCollection directive is required on type ${def.name.value}`
+      );
+    }
+    const dbCollectionName = dbCollectionDirective?.arguments?.find(
+      (arg) => arg.name.value === 'collectionName'
+    )?.value as StringValueNode;
+    if (!dbCollectionName) {
+      throw new Error(
+        `collectionName argument is required on directive @dbCollection on type ${def.name.value}`
+      );
+    }
+
+    return {
+      name: def.name.value,
+      properties: extractDetailedGaqFieldDefinitions(def.fields),
+      dbCollectionName: dbCollectionName.value,
+    };
+  });
 }
 
 function extractDetailedGaqFieldDefinitions(
@@ -194,8 +222,8 @@ export const getAutoResolvers = (
 ): GaqResolverDescription[] => {
   const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
 
-  return Object.entries(typeDefinitions).map(([typeName, typeDefinition]) => {
-    const propertiesToResolve = Object.entries(typeDefinition)
+  return typeDefinitions.map((typeDefinition) => {
+    const propertiesToResolve = Object.entries(typeDefinition.properties)
       .filter(([_, fieldDefinition]) => fieldDefinition.fieldResolver)
       .map(([fieldName, fieldDefinition]) => ({
         name: fieldName,
@@ -211,10 +239,11 @@ export const getAutoResolvers = (
       } satisfies GaqFieldResolverDescription;
     });
     return {
-      queryName: `${typeName.toLowerCase()}GaqQueryResult`,
-      resultType: `${typeName}GaqResult`,
-      linkedType: typeName,
+      queryName: `${typeDefinition.name.toLowerCase()}GaqQueryResult`,
+      resultType: `${typeDefinition.name}GaqResult`,
+      linkedType: typeDefinition.name,
       fieldResolvers,
+      dbCollectionName: typeDefinition.dbCollectionName,
     } satisfies GaqResolverDescription;
   });
 };
@@ -259,6 +288,31 @@ export const getAutoSchemaAndResolvers = (
   return { gaqSchema, gaqResolverDescriptions };
 };
 
+export const getDbCollectionNameMap = (
+  typeDefs: DocumentNode
+): Map<string, string> => {
+  const collectionMap = new Map<string, string>();
+  visit(typeDefs, {
+    ObjectTypeDefinition(node) {
+      if (node.name.value === 'Query' || node.name.value === 'Mutation') {
+        return;
+      }
+      const dbCollectionDirective = node.directives?.find(
+        (directive) => directive.name.value === 'dbCollection'
+      );
+      if (dbCollectionDirective) {
+        const collectionNameArg = dbCollectionDirective.arguments?.find(
+          (arg) => arg.name.value === 'collectionName'
+        );
+        if (collectionNameArg?.value.kind === Kind.STRING) {
+          collectionMap.set(node.name.value, collectionNameArg.value.value);
+        }
+      }
+    },
+  });
+  return collectionMap;
+};
+
 export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   options: Pick<
     GaqServerOptions,
@@ -280,8 +334,11 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     ? mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs])
     : autoTypesDefs;
 
+  const dbCollectionNameMap = getDbCollectionNameMap(typeDefs);
+
   logger.debug('Merged schema');
   const resolvers = generateResolvers<TContext>({
+    dbCollectionNameMap,
     gaqResolverDescriptions,
     standardApolloResolvers: options.standardApolloResolvers,
   });

@@ -27,7 +27,7 @@ export const getMockedDatasource = (): GaqDbConnector => {
     connect: async () => {
       return {
         collection: (collectionName: string) => {
-          if (collectionName === 'Book') {
+          if (collectionName === 'books') {
             return {
               getFromGaqFilters: async (
                 filters: GaqRootQueryFilter<{ title: string; authorId: string }>
@@ -46,7 +46,7 @@ export const getMockedDatasource = (): GaqDbConnector => {
               },
             };
           }
-          if (collectionName === 'Author') {
+          if (collectionName === 'authors') {
             return {
               getByField: async ({
                 field,
@@ -59,7 +59,7 @@ export const getMockedDatasource = (): GaqDbConnector => {
               },
             };
           }
-          if (collectionName === 'Review') {
+          if (collectionName === 'reviews') {
             return {
               getByField: async ({
                 field,

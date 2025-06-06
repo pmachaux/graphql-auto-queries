@@ -5,12 +5,21 @@ import {
 import { GaqResolverDescription } from '../interfaces/common.interfaces';
 
 describe('getResolversFromDescriptions', () => {
+  let dbCollectionNameMap: Map<string, string>;
+  beforeEach(() => {
+    dbCollectionNameMap = new Map([
+      ['Book', 'books'],
+      ['Author', 'authors'],
+      ['Review', 'reviews'],
+    ]);
+  });
   it('should create resolvers from descriptions', () => {
     const mockDescriptions: GaqResolverDescription[] = [
       {
         queryName: 'bookGaqQueryResult',
         resultType: 'BookGaqResult',
         linkedType: 'Book',
+        dbCollectionName: 'books',
         fieldResolvers: [],
       },
     ];
@@ -18,19 +27,23 @@ describe('getResolversFromDescriptions', () => {
     const mockContext = {
       gaqDbClient: {
         collection: jest.fn().mockImplementation((type) => ({
-          get: jest.fn().mockResolvedValue([]),
+          getFromGaqFilters: jest.fn().mockResolvedValue([]),
+          getByField: jest.fn().mockResolvedValue([]),
         })),
       },
     };
 
-    const resolvers = getResolversFromDescriptions(mockDescriptions);
+    const resolvers = getResolversFromDescriptions(
+      mockDescriptions,
+      dbCollectionNameMap
+    );
     expect(resolvers).toHaveProperty('Query');
     expect(resolvers.Query).toHaveProperty('bookGaqQueryResult');
 
     // Test resolver execution
     const bookResolver = resolvers.Query.bookGaqQueryResult;
     const result = bookResolver(null, { filter: {} } as any, mockContext, null);
-    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('Book');
+    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('books');
     expect(result).resolves.toEqual({ count: 0, result: [] });
   });
 
@@ -40,6 +53,7 @@ describe('getResolversFromDescriptions', () => {
         queryName: 'userGaqQueryResult',
         resultType: 'UserGaqResult',
         linkedType: 'User',
+        dbCollectionName: 'users',
         fieldResolvers: [],
       },
     ];
@@ -50,7 +64,10 @@ describe('getResolversFromDescriptions', () => {
       },
     };
 
-    const resolvers = getResolversFromDescriptions(mockDescriptions);
+    const resolvers = getResolversFromDescriptions(
+      mockDescriptions,
+      dbCollectionNameMap
+    );
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(
       { someData: 'test' },
@@ -67,6 +84,7 @@ describe('getResolversFromDescriptions', () => {
         queryName: 'userGaqQueryResult',
         resultType: 'UserGaqResult',
         linkedType: 'User',
+        dbCollectionName: 'users',
         fieldResolvers: [],
       },
     ];
@@ -77,11 +95,14 @@ describe('getResolversFromDescriptions', () => {
       },
     };
 
-    const resolvers = getResolversFromDescriptions(mockDescriptions);
+    const resolvers = getResolversFromDescriptions(
+      mockDescriptions,
+      dbCollectionNameMap
+    );
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(null, { filter: {} } as any, mockContext, null);
     expect(result).toBeNull();
-    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('User');
+    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('users');
   });
 
   describe('generateResolvers', () => {
@@ -91,6 +112,7 @@ describe('getResolversFromDescriptions', () => {
           queryName: 'bookGaqQueryResult',
           resultType: 'BookGaqResult',
           linkedType: 'Book',
+          dbCollectionName: 'books',
           fieldResolvers: [
             {
               parentKey: 'authorId',
@@ -113,6 +135,7 @@ describe('getResolversFromDescriptions', () => {
       };
 
       const resolvers = generateResolvers({
+        dbCollectionNameMap,
         gaqResolverDescriptions,
         standardApolloResolvers,
       });
@@ -130,11 +153,13 @@ describe('getResolversFromDescriptions', () => {
           queryName: 'bookGaqQueryResult',
           resultType: 'BookGaqResult',
           linkedType: 'Book',
+          dbCollectionName: 'books',
           fieldResolvers: [],
         },
       ];
 
       const resolvers = generateResolvers({
+        dbCollectionNameMap,
         gaqResolverDescriptions,
         standardApolloResolvers: undefined,
       });
@@ -150,6 +175,7 @@ describe('getResolversFromDescriptions', () => {
           queryName: 'bookGaqQueryResult',
           resultType: 'BookGaqResult',
           linkedType: 'Book',
+          dbCollectionName: 'books',
           fieldResolvers: [
             {
               parentKey: 'authorId',
@@ -162,6 +188,7 @@ describe('getResolversFromDescriptions', () => {
         },
       ];
       const resolvers = generateResolvers({
+        dbCollectionNameMap,
         gaqResolverDescriptions,
         standardApolloResolvers: undefined,
       });

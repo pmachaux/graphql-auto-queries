@@ -53,6 +53,7 @@ export interface GaqResolverDescription {
   resultType: string;
   linkedType: string;
   fieldResolvers: GaqFieldResolverDescription[];
+  dbCollectionName: string;
 }
 
 export interface DetailedGaqFieldDefinition {
@@ -64,6 +65,7 @@ export interface DetailedGaqFieldDefinition {
 export interface DetailedGaqTypeDefinition {
   name: string;
   properties: Record<string, DetailedGaqFieldDefinition>;
+  dbCollectionName: string;
 }
 
 export interface GaqResult<T extends object> {

@@ -62,6 +62,8 @@ server
   });
 ```
 
+See how to make a query at [Filtering & Querying](#filtering--querying)
+
 ## API Highlights
 
 ### Main Entry Point

@@ -1,6 +1,10 @@
 import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
 import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
-import { IResolvers, ISchemaLevelResolver } from '@graphql-tools/utils';
+import {
+  IResolvers,
+  ISchemaLevelResolver,
+  SchemaMapper,
+} from '@graphql-tools/utils';
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
 
@@ -15,6 +19,16 @@ export interface GaqContext extends BaseContext {
   gaqDbClient: GaqDbClient;
 }
 
+/**
+ * Configuration options specific to GraphQL Auto Queries server
+ * @property {string} autoTypes - Provide types you want the associated queries to be auto-generated and auto-resolved
+ * @property {GaqDbConnector} dbConnector - Database connector instance for handling database operations
+ * @property {ApolloServerOptions<GaqContext>['typeDefs']} [standardGraphqlTypes] - (Optional) other schema definitions that won't be auto-generated and will be merged with auto-generated types. It replaces the typeDefs property of the ApolloServerOptions.
+ * @property {IResolvers<{ Query?: Record<string, any> } & Record<string, any>, GaqContext>} [standardApolloResolvers] - (Optional) non auto-generated resolvers that will be merged with auto-generated resolvers. It replaces the resolvers property of the ApolloServerOptions.
+ * @property {GaqLogger} [logger] - (Optional) logger instance for server logging. If not provided, a default logger will be used.
+ * @property {SchemaMapper} [schemaMapper] - (Optional) schema mapper used for transformations with graphql-tools library. See https://the-guild.dev/graphql/tools/docs/schema-directives#enforcing-access-permissions
+ */
+
 export type GaqOnlyServerOptions = {
   autoTypes: string;
   dbConnector: GaqDbConnector;
@@ -24,6 +38,7 @@ export type GaqOnlyServerOptions = {
     GaqContext
   >;
   logger?: GaqLogger;
+  schemaMapper?: SchemaMapper;
 };
 
 export type GaqServerOptions = Prettify<

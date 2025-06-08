@@ -54,6 +54,7 @@
     "@graphql-tools/utils": "^10.8.6",
     "@types/supertest": "^6.0.3",
     "axios": "^1.6.0",
+    "dataloader": "^2.2.3",
     "graphql": "^16.11.0",
     "graphql-tag": "^2.12.6"
   }

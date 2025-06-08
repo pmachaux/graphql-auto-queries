@@ -204,6 +204,12 @@ describe('gaq', () => {
     afterAll(async () => {
       await server.stop();
     });
+
+    beforeEach(() => {
+      bookSpy.mockClear();
+      authorSpy.mockClear();
+      reviewSpy.mockClear();
+    });
     it('should resolve fields by calling the field resolver only once', async () => {
       const queryData = {
         query: `query($filters: GaqRootFiltersInput) {
@@ -231,13 +237,48 @@ describe('gaq', () => {
           }>,
         },
       };
-      console.log(server);
+
       const response = await request(url).post('/').send(queryData);
       expect(response.body.errors).toBeUndefined();
       expect(response.body.data?.bookGaqQueryResult.result.length).toEqual(3);
       expect(bookSpy).toHaveBeenCalledTimes(1);
       expect(authorSpy).toHaveBeenCalledTimes(1);
       expect(reviewSpy).toHaveBeenCalledTimes(1);
+    });
+    it('should not keep the cache after the request is done and recall the datasources on a new query', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                id
+                title
+                authorId
+                author {
+                  name
+                }
+                reviews {
+                  id
+                  content
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+
+      await request(url).post('/').send(queryData);
+      await request(url).post('/').send(queryData);
+
+      expect(bookSpy).toHaveBeenCalledTimes(2);
+      expect(authorSpy).toHaveBeenCalledTimes(2);
+      expect(reviewSpy).toHaveBeenCalledTimes(2);
     });
   });
 

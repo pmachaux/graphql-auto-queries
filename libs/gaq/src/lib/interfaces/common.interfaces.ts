@@ -7,6 +7,7 @@ import {
 } from '@graphql-tools/utils';
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
+import { GraphQLSchema } from 'graphql';
 
 export interface GaqLogger {
   info: (message: any) => void;
@@ -38,7 +39,7 @@ export type GaqOnlyServerOptions = {
     GaqContext
   >;
   logger?: GaqLogger;
-  schemaMapper?: SchemaMapper;
+  schemaMapper?: (schema: GraphQLSchema) => SchemaMapper;
 };
 
 export type GaqServerOptions = Prettify<

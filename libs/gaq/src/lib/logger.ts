@@ -17,11 +17,7 @@ const createDefaultLogger = (): GaqLogger => {
 
 let logger!: GaqLogger;
 
-export const setLogger = (gaqLogger: GaqLogger) => {
-  if (logger) {
-    logger.error('Logger already set');
-    throw new Error('Logger already set');
-  }
+export const setLogger = (gaqLogger?: GaqLogger) => {
   logger = gaqLogger ?? createDefaultLogger();
 };
 

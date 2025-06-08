@@ -24,6 +24,7 @@ import { generateResolvers } from './resolver-builder';
 
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
+import { mapSchema } from '@graphql-tools/utils';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -316,7 +317,10 @@ export const getDbCollectionNameMap = (
 export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   options: Pick<
     GaqServerOptions,
-    'autoTypes' | 'standardGraphqlTypes' | 'standardApolloResolvers'
+    | 'autoTypes'
+    | 'standardGraphqlTypes'
+    | 'standardApolloResolvers'
+    | 'schemaMapper'
   >
 ): Pick<ApolloServerOptions<TContext>, 'schema'> => {
   const logger = getLogger();
@@ -344,10 +348,15 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   });
   logger.debug('Auto resolvers built and merged with standard ones');
 
+  const executableSchema = makeExecutableSchema({
+    typeDefs,
+    resolvers,
+  });
+  const schema = options.schemaMapper
+    ? mapSchema(executableSchema, options.schemaMapper(executableSchema))
+    : executableSchema;
+
   return {
-    schema: makeExecutableSchema({
-      typeDefs,
-      resolvers,
-    }),
+    schema,
   };
 };

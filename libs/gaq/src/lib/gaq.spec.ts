@@ -6,6 +6,8 @@ import {
   GaqRootQueryFilter,
 } from './interfaces/common.interfaces';
 import * as request from 'supertest';
+import { getDirective, MapperKind, SchemaMapper } from '@graphql-tools/utils';
+import { defaultFieldResolver, GraphQLSchema } from 'graphql';
 describe('gaq', () => {
   describe('basic features', () => {
     let server: GaqServer;
@@ -154,12 +156,12 @@ describe('gaq', () => {
         ],
       });
     });
-    it('should be able to support custom directives such as authentication through a schema mapper', async () => {});
   });
 
   describe('schema transformation support', () => {
     let protectedServer: GaqServer;
     let urlProtectedServer: string;
+    let getUserFn: jest.Mock;
     beforeAll(async () => {
       protectedServer = getGraphQLAutoQueriesServer({
         autoTypes: `
@@ -181,6 +183,37 @@ describe('gaq', () => {
           }
         `,
         dbConnector: getMockedDatasource(),
+        schemaMapper: (schema: GraphQLSchema) => {
+          const typeDirectiveArgumentMaps: Record<string, any> = {};
+          return {
+            [MapperKind.TYPE]: (type) => {
+              const authDirective = getDirective(schema, type, 'auth')?.[0];
+              if (authDirective) {
+                typeDirectiveArgumentMaps[type.name] = authDirective;
+              }
+              return undefined;
+            },
+            [MapperKind.OBJECT_FIELD]: (fieldConfig, _fieldName, typeName) => {
+              const authDirective =
+                getDirective(schema, fieldConfig, 'auth')?.[0] ??
+                typeDirectiveArgumentMaps[typeName];
+              if (authDirective) {
+                const { role } = authDirective;
+                if (role) {
+                  const { resolve = defaultFieldResolver } = fieldConfig;
+                  fieldConfig.resolve = function (source, args, context, info) {
+                    const user = getUserFn();
+                    if (!user.roles.includes(role)) {
+                      throw new Error('not authorized');
+                    }
+                    return resolve(source, args, context, info);
+                  };
+                  return fieldConfig;
+                }
+              }
+            },
+          } satisfies SchemaMapper;
+        },
       });
       ({ url: urlProtectedServer } =
         await protectedServer.startGraphQLAutoQueriesServer({
@@ -192,6 +225,7 @@ describe('gaq', () => {
     });
     describe('authentication support', () => {
       it('should prevent the user from querying Book if he does not have the role user', async () => {
+        getUserFn = jest.fn().mockReturnValue({ roles: [] });
         const queryData = {
           query: `query($filters: GaqRootFiltersInput) {
               bookGaqQueryResult(filters: $filters) {
@@ -219,8 +253,10 @@ describe('gaq', () => {
           .post('/')
           .send(queryData);
         expect(response.body.errors).toBeDefined();
+        expect(response.body.errors?.[0].message).toContain('not authorized');
       });
       it('should prevent the user from querying the protected if he does not have the proper roles', async () => {
+        getUserFn = jest.fn().mockReturnValue({ roles: ['user'] });
         const queryData = {
           query: `query($filters: GaqRootFiltersInput) {
               bookGaqQueryResult(filters: $filters) {
@@ -252,8 +288,12 @@ describe('gaq', () => {
           .post('/')
           .send(queryData);
         expect(response.body.errors).toBeDefined();
+        expect(response.body.errors?.[0].message).toContain('not authorized');
       });
       it('should let the user perform the query if he has the proper roles', async () => {
+        getUserFn = jest
+          .fn()
+          .mockReturnValue({ roles: ['paidUser', 'user', 'admin'] });
         const queryData = {
           query: `query($filters: GaqRootFiltersInput) {
               bookGaqQueryResult(filters: $filters) {

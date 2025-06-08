@@ -157,6 +157,89 @@ describe('gaq', () => {
       });
     });
   });
+  describe('solving n+1 problem', () => {
+    let server: GaqServer;
+    let url: string;
+    let bookSpy: jest.SpyInstance;
+    let authorSpy: jest.SpyInstance;
+    let reviewSpy: jest.SpyInstance;
+    beforeAll(async () => {
+      bookSpy = jest.fn();
+      authorSpy = jest.fn();
+      reviewSpy = jest.fn();
+      server = getGraphQLAutoQueriesServer({
+        autoTypes: `
+          type Book @dbCollection(collectionName: "books"){
+            id: ID
+            title: String
+            authorId: String
+            author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
+            reviews: [Review] @fieldResolver(parentKey: "id", fieldKey: "bookId")
+          }
+        
+          type Author @dbCollection(collectionName: "authors"){
+            id: ID
+            name: String
+            books: [Book]
+          }
+
+          type Review @dbCollection(collectionName: "reviews"){
+            id: ID
+            content: String
+            bookId: String
+            book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
+          }
+        `,
+        dbConnector: getMockedDatasource({
+          bookSpy: bookSpy as any,
+          authorSpy: authorSpy as any,
+          reviewSpy: reviewSpy as any,
+        }),
+      });
+      ({ url } = await server.startGraphQLAutoQueriesServer({
+        listen: { port: 0 },
+      }));
+    });
+
+    afterAll(async () => {
+      await server.stop();
+    });
+    it('should resolve fields by calling the field resolver only once', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                id
+                title
+                authorId
+                author {
+                  name
+                }
+                reviews {
+                  id
+                  content
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+      console.log(server);
+      const response = await request(url).post('/').send(queryData);
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data?.bookGaqQueryResult.result.length).toEqual(3);
+      expect(bookSpy).toHaveBeenCalledTimes(1);
+      expect(authorSpy).toHaveBeenCalledTimes(1);
+      expect(reviewSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 
   describe('schema transformation support', () => {
     let protectedServer: GaqServer;

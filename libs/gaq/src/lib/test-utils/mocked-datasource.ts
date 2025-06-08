@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import {
   GaqDbConnector,
   GaqFilterQuery,
@@ -22,7 +23,11 @@ const reviews = [
   { id: '3', bookId: '2', content: 'Not my cup of tea' },
 ];
 
-export const getMockedDatasource = (): GaqDbConnector => {
+export const getMockedDatasource = (spies?: {
+  bookSpy?: Function;
+  authorSpy?: Function;
+  reviewSpy?: Function;
+}): GaqDbConnector => {
   return {
     connect: async () => {
       return {
@@ -32,6 +37,10 @@ export const getMockedDatasource = (): GaqDbConnector => {
               getFromGaqFilters: async (
                 filters: GaqRootQueryFilter<{ title: string; authorId: string }>
               ) => {
+                spies?.bookSpy?.(filters);
+                if (filters.and.length === 0) {
+                  return books;
+                }
                 return books.filter((book) => {
                   return (
                     book.title ===
@@ -55,6 +64,7 @@ export const getMockedDatasource = (): GaqDbConnector => {
                 field: string;
                 value: string;
               }) => {
+                spies?.authorSpy?.({ field, value });
                 return authors.filter((a) => a[field] === value);
               },
             };
@@ -68,6 +78,7 @@ export const getMockedDatasource = (): GaqDbConnector => {
                 field: string;
                 value: string;
               }) => {
+                spies?.reviewSpy?.({ field, value });
                 return reviews.filter((a) => a[field] === value);
               },
             };

@@ -8,6 +8,7 @@ import {
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
 import { GraphQLSchema } from 'graphql';
+import DataLoader = require('dataloader');
 
 export interface GaqLogger {
   info: (message: any) => void;
@@ -18,6 +19,7 @@ export interface GaqLogger {
 
 export interface GaqContext extends BaseContext {
   gaqDbClient: GaqDbClient;
+  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
 }
 
 /**
@@ -32,7 +34,7 @@ export interface GaqContext extends BaseContext {
 
 export type GaqOnlyServerOptions = {
   autoTypes: string;
-  dbConnector: GaqDbConnector;
+  dbClient: GaqDbClient;
   standardGraphqlTypes?: ApolloServerOptions<GaqContext>['typeDefs'];
   standardApolloResolvers?: IResolvers<
     { Query?: Record<string, any> } & Record<string, any>,
@@ -55,12 +57,16 @@ export type GaqServer<TContext extends GaqContext = GaqContext> =
     ) => Promise<{ url: string }>;
   };
 
-export type GaqFieldResolverArguments = { parentKey: string; fieldKey: string };
+export type GaqFieldResolverArguments = {
+  parentKey: string;
+  fieldKey: string;
+};
 export type GaqFieldResolverDescription = Prettify<
   GaqFieldResolverArguments & {
     isArray: boolean;
     fieldType: string;
     fieldName: string;
+    dataloaderName: string;
   }
 >;
 
@@ -117,8 +123,8 @@ export interface GaqCollectionClient<T extends object> {
     filters?: GaqRootQueryFilter<T> | undefined,
     opts?: { traceId?: string } & GaqDbQueryOptions
   ): Promise<Array<T>>;
-  getByField(
-    payload: { field: string; value: any },
+  getValuesInField(
+    payload: { field: string; values: any[] },
     opts?: { traceId?: string } & GaqDbQueryOptions
   ): Promise<T[]>;
 }

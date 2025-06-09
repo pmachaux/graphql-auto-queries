@@ -36,7 +36,7 @@ describe('gaq', () => {
             book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
           }
         `,
-        dbConnector: getMockedDatasource(),
+        dbClient: getMockedDatasource(),
       });
       ({ url } = await server.startGraphQLAutoQueriesServer({
         listen: { port: 0 },
@@ -190,7 +190,7 @@ describe('gaq', () => {
             book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
           }
         `,
-        dbConnector: getMockedDatasource({
+        dbClient: getMockedDatasource({
           bookSpy: bookSpy as any,
           authorSpy: authorSpy as any,
           reviewSpy: reviewSpy as any,
@@ -306,7 +306,7 @@ describe('gaq', () => {
             books: [Book]
           }
         `,
-        dbConnector: getMockedDatasource(),
+        dbClient: getMockedDatasource(),
         schemaMapper: (schema: GraphQLSchema) => {
           const typeDirectiveArgumentMaps: Record<string, any> = {};
           return {

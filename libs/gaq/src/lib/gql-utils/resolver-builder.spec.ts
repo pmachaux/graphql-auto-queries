@@ -3,15 +3,29 @@ import {
   getResolversFromDescriptions,
 } from './resolver-builder';
 import { GaqResolverDescription } from '../interfaces/common.interfaces';
+import DataLoader = require('dataloader');
 
 describe('getResolversFromDescriptions', () => {
   let dbCollectionNameMap: Map<string, string>;
+  let gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+  let BookauthorDataloader: jest.Mock;
+  let BookreviewsDataloader: jest.Mock;
   beforeEach(() => {
     dbCollectionNameMap = new Map([
       ['Book', 'books'],
       ['Author', 'authors'],
       ['Review', 'reviews'],
     ]);
+    BookauthorDataloader = jest.fn();
+    BookreviewsDataloader = jest.fn();
+
+    gaqDataloaders = new Map();
+    gaqDataloaders.set('BookauthorDataloader', {
+      load: BookauthorDataloader,
+    } as any);
+    gaqDataloaders.set('BookreviewsDataloader', {
+      load: BookreviewsDataloader,
+    } as any);
   });
   it('should create resolvers from descriptions', () => {
     const mockDescriptions: GaqResolverDescription[] = [
@@ -31,6 +45,7 @@ describe('getResolversFromDescriptions', () => {
           getByField: jest.fn().mockResolvedValue([]),
         })),
       },
+      gaqDataloaders,
     };
 
     const resolvers = getResolversFromDescriptions(
@@ -62,6 +77,7 @@ describe('getResolversFromDescriptions', () => {
       gaqDbClient: {
         collection: jest.fn(),
       },
+      gaqDataloaders,
     };
 
     const resolvers = getResolversFromDescriptions(
@@ -93,6 +109,7 @@ describe('getResolversFromDescriptions', () => {
       gaqDbClient: {
         collection: jest.fn().mockReturnValue(null),
       },
+      gaqDataloaders,
     };
 
     const resolvers = getResolversFromDescriptions(
@@ -120,6 +137,7 @@ describe('getResolversFromDescriptions', () => {
               isArray: false,
               fieldType: 'Author',
               fieldName: 'author',
+              dataloaderName: 'BookauthorDataloader',
             },
           ],
         },
@@ -183,6 +201,7 @@ describe('getResolversFromDescriptions', () => {
               isArray: false,
               fieldType: 'Author',
               fieldName: 'author',
+              dataloaderName: 'BookauthorDataloader',
             },
           ],
         },

@@ -5,7 +5,6 @@ import {
 } from '@apollo/server/standalone';
 import {
   GaqContext,
-  GaqDbClient,
   GaqServer,
   GaqServerOptions,
 } from './interfaces/common.interfaces';
@@ -15,16 +14,19 @@ import { ListenOptions } from 'net';
 import { WithRequired } from './interfaces/ts-wizard.interface';
 import { getLogger, setLogger } from './logger';
 import { GraphQLSchema } from 'graphql';
+import * as DataLoader from 'dataloader';
 
 export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
   config: GaqServerOptions
 ): GaqServer<TContext> {
   setLogger(config.logger);
   const logger = getLogger();
+
   logger.info('Creating GraphQL Auto Queries Server...');
   let schema: GraphQLSchema;
+  let gaqDataloaders: Map<string, DataLoader<any, any, any>>;
   try {
-    schema = getMergedSchemaAndResolvers(config).schema;
+    ({ schema, gaqDataloaders } = getMergedSchemaAndResolvers(config));
   } catch (error) {
     logger.error('Error creating auto schema and resolvers');
     logger.error(error);
@@ -51,20 +53,13 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
       }
     ) => {
       logger.info('Starting GraphQL Auto Queries Server...');
-      let gaqDbClient: GaqDbClient;
-      try {
-        gaqDbClient = await config.dbConnector.connect();
-      } catch (error) {
-        logger.error('Error connecting to database');
-        logger.error(error);
-        throw error;
-      }
 
       const context = async ({ req, res }): Promise<TContext> => {
         const apolloContext = await options?.context?.({ req, res });
         return {
           ...apolloContext,
-          gaqDbClient,
+          gaqDbClient: config.dbClient,
+          gaqDataloaders,
         } as unknown as TContext;
       };
       const optionsWithGaqContext = {

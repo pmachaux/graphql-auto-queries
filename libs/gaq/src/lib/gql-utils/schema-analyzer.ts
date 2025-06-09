@@ -13,6 +13,8 @@ import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
   GaqContext,
+  GaqDbClient,
+  GaqFieldResolverArguments,
   GaqFieldResolverDescription,
   GaqResolverDescription,
   GaqServerOptions,
@@ -25,6 +27,8 @@ import { generateResolvers } from './resolver-builder';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
 import { mapSchema } from '@graphql-tools/utils';
+import * as DataLoader from 'dataloader';
+import { getNewDataLoaderFromFieldResolver } from './dataloader';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -154,7 +158,7 @@ function extractFieldDefinition(
 ): DetailedGaqFieldDefinition {
   const typeName = extractTypeFromNestedType(field.type);
 
-  let fieldResolver: { parentKey: string; fieldKey: string } | null = null;
+  let fieldResolver: GaqFieldResolverArguments | null = null;
   const fieldResolverDirective = field.directives?.find(
     (directive) => directive.name.value === 'fieldResolver'
   );
@@ -218,27 +222,45 @@ const getObjectTypesDefinitionsFromDocumentNode = (
     );
 };
 
-export const getAutoResolvers = (
-  autoTypes: string
-): GaqResolverDescription[] => {
+const getFieldResolversFromProperties = (
+  propertiesToResolve: {
+    name: string;
+    definition: DetailedGaqFieldDefinition;
+  }[],
+  typeDefinition: DetailedGaqTypeDefinition
+) => {
+  return propertiesToResolve.map((propertyToResolve) => {
+    return {
+      parentKey: propertyToResolve.definition.fieldResolver.parentKey,
+      fieldKey: propertyToResolve.definition.fieldResolver.fieldKey,
+      isArray: propertyToResolve.definition.isArray,
+      fieldType: propertyToResolve.definition.type,
+      fieldName: propertyToResolve.name,
+      dataloaderName: `${typeDefinition.name}${propertyToResolve.name}Dataloader`,
+    } satisfies GaqFieldResolverDescription;
+  });
+};
+
+export const getAutoResolversAndDataloaders = (
+  autoTypes: string,
+  gaqDbClient: GaqDbClient
+): {
+  gaqResolverDescriptions: GaqResolverDescription[];
+  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+} => {
   const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
 
-  return typeDefinitions.map((typeDefinition) => {
+  const gaqResolverDescriptions = typeDefinitions.map((typeDefinition) => {
     const propertiesToResolve = Object.entries(typeDefinition.properties)
       .filter(([_, fieldDefinition]) => fieldDefinition.fieldResolver)
       .map(([fieldName, fieldDefinition]) => ({
         name: fieldName,
         definition: fieldDefinition as DetailedGaqFieldDefinition,
       }));
-    const fieldResolvers = propertiesToResolve.map((propertyToResolve) => {
-      return {
-        parentKey: propertyToResolve.definition.fieldResolver.parentKey,
-        fieldKey: propertyToResolve.definition.fieldResolver.fieldKey,
-        isArray: propertyToResolve.definition.isArray,
-        fieldType: propertyToResolve.definition.type,
-        fieldName: propertyToResolve.name,
-      } satisfies GaqFieldResolverDescription;
-    });
+    const fieldResolvers = getFieldResolversFromProperties(
+      propertiesToResolve,
+      typeDefinition
+    );
     return {
       queryName: `${typeDefinition.name.toLowerCase()}GaqQueryResult`,
       resultType: `${typeDefinition.name}GaqResult`,
@@ -247,18 +269,45 @@ export const getAutoResolvers = (
       dbCollectionName: typeDefinition.dbCollectionName,
     } satisfies GaqResolverDescription;
   });
+
+  const gaqDataloaders = new Map<string, DataLoader<any, any, any>>();
+  gaqResolverDescriptions.forEach((resolverDescription) => {
+    resolverDescription.fieldResolvers.forEach((fieldResolver) => {
+      const dataloader = getNewDataLoaderFromFieldResolver(
+        fieldResolver,
+        resolverDescription,
+        gaqDbClient
+      );
+      const dataloaderName = `${resolverDescription.linkedType}${fieldResolver.fieldName}Dataloader`;
+      gaqDataloaders.set(dataloaderName, dataloader);
+    });
+  });
+
+  return {
+    gaqResolverDescriptions,
+    gaqDataloaders,
+  };
 };
 
 export const getAutoSchemaAndResolvers = (
-  options: Pick<GaqServerOptions, 'autoTypes'>
-): { gaqSchema: string; gaqResolverDescriptions: GaqResolverDescription[] } => {
+  options: Pick<GaqServerOptions, 'autoTypes' | 'dbClient'>
+): {
+  gaqSchema: string;
+  gaqResolverDescriptions: GaqResolverDescription[];
+  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+} => {
   const logger = getLogger();
   logger.debug('Building auto resolvers');
-  const gaqResolverDescriptions = getAutoResolvers(options.autoTypes);
+  const { gaqResolverDescriptions, gaqDataloaders } =
+    getAutoResolversAndDataloaders(options.autoTypes, options.dbClient);
 
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
-    return { gaqSchema: options.autoTypes, gaqResolverDescriptions: [] };
+    return {
+      gaqSchema: options.autoTypes,
+      gaqResolverDescriptions: [],
+      gaqDataloaders: new Map(),
+    };
   }
   logger.debug(
     `Found ${gaqResolverDescriptions.length} auto resolvers to build`
@@ -286,7 +335,7 @@ export const getAutoSchemaAndResolvers = (
   }`;
 
   logger.debug('Auto schema built');
-  return { gaqSchema, gaqResolverDescriptions };
+  return { gaqSchema, gaqResolverDescriptions, gaqDataloaders };
 };
 
 export const getDbCollectionNameMap = (
@@ -321,10 +370,13 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     | 'standardGraphqlTypes'
     | 'standardApolloResolvers'
     | 'schemaMapper'
+    | 'dbClient'
   >
-): Pick<ApolloServerOptions<TContext>, 'schema'> => {
+): Pick<ApolloServerOptions<TContext>, 'schema'> & {
+  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+} => {
   const logger = getLogger();
-  const { gaqSchema, gaqResolverDescriptions } =
+  const { gaqSchema, gaqResolverDescriptions, gaqDataloaders } =
     getAutoSchemaAndResolvers(options);
   const autoTypesDefs = gql`
     ${gaqSchema}
@@ -358,5 +410,6 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
 
   return {
     schema,
+    gaqDataloaders,
   };
 };

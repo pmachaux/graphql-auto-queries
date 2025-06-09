@@ -163,6 +163,7 @@ describe('schema-analyzer', () => {
             isArray: false,
             fieldType: 'Author',
             fieldName: 'author',
+            dataloaderName: 'BookauthorDataloader',
           },
         ],
       });
@@ -204,6 +205,7 @@ describe('schema-analyzer', () => {
             isArray: true,
             fieldType: 'Review',
             fieldName: 'reviews',
+            dataloaderName: 'BookreviewsDataloader',
           },
         ],
       });
@@ -219,6 +221,7 @@ describe('schema-analyzer', () => {
             isArray: false,
             fieldType: 'Book',
             fieldName: 'book',
+            dataloaderName: 'ReviewbookDataloader',
           },
         ],
       });
@@ -321,6 +324,7 @@ describe('schema-analyzer', () => {
             isArray: false,
             fieldType: 'Author',
             fieldName: 'author',
+            dataloaderName: 'BookauthorDataloader',
           },
           {
             parentKey: 'id',
@@ -328,6 +332,7 @@ describe('schema-analyzer', () => {
             isArray: true,
             fieldType: 'Review',
             fieldName: 'reviews',
+            dataloaderName: 'BookreviewsDataloader',
           },
         ],
       });
@@ -363,6 +368,7 @@ describe('schema-analyzer', () => {
         isArray: false,
         fieldType: 'Author',
         fieldName: 'author',
+        dataloaderName: 'BookauthorDataloader',
       });
       expect(gaqResolverDescriptions[1].fieldResolvers[0]).toEqual({
         parentKey: 'id',
@@ -370,6 +376,7 @@ describe('schema-analyzer', () => {
         isArray: true,
         fieldType: 'Book',
         fieldName: 'books',
+        dataloaderName: 'AuthorbooksDataloader',
       });
     });
   });

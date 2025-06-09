@@ -75,29 +75,16 @@ const getFieldResolver = (
       return fieldResolverDescription.isArray ? [] : null;
     }
     logger.debug(`Getting data from collection ${dbCollectionName}`);
-    return collectionClient
-      .getByField({
-        field: fieldResolverDescription.fieldKey,
-        value: parent[fieldResolverDescription.parentKey],
-      })
-      .then((data) => {
-        logger.debug(
-          `Data for ${fieldResolverDescription.fieldName} fetched, returning ${data.length} items`
-        );
-        if (fieldResolverDescription.isArray) {
-          return data;
-        }
-        if (data.length === 0) {
-          return null;
-        }
-        return data[0];
-      })
-      .catch((error) => {
-        logger.error(
-          `Field resolution failed, error fetching data for ${fieldResolverDescription.fieldName}: ${error}`
-        );
-        throw new Error(GaqErrorCodes.INTERNAL_SERVER_ERROR);
-      });
+
+    const dataloader = contextValue.gaqDataloaders.get(
+      fieldResolverDescription.dataloaderName
+    );
+    if (!dataloader) {
+      throw new Error(
+        `Dataloader ${fieldResolverDescription.dataloaderName} not found`
+      );
+    }
+    return dataloader.load(parent[fieldResolverDescription.parentKey]);
   };
 
   return fieldResolver;

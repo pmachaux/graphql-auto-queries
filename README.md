@@ -19,6 +19,7 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 - Mongo DB connector
 - Federation support as subgraph
 - PostGres connector
+- Add traceId on logs for better request tracking
 
 ## Usage Example
 

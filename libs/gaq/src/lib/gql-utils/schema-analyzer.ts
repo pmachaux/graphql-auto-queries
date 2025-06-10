@@ -243,7 +243,8 @@ const getFieldResolversFromProperties = (
 
 export const getAutoResolversAndDataloaders = (
   autoTypes: string,
-  gaqDbClient: GaqDbClient
+  gaqDbClient: GaqDbClient,
+  dbCollectionNameMap: Map<string, string>
 ): {
   gaqResolverDescriptions: GaqResolverDescription[];
   gaqDataloaders: Map<string, DataLoader<any, any, any>>;
@@ -275,7 +276,7 @@ export const getAutoResolversAndDataloaders = (
     resolverDescription.fieldResolvers.forEach((fieldResolver) => {
       const dataloader = getNewDataLoaderFromFieldResolver(
         fieldResolver,
-        resolverDescription,
+        dbCollectionNameMap,
         gaqDbClient
       );
       const dataloaderName = `${resolverDescription.linkedType}${fieldResolver.fieldName}Dataloader`;
@@ -290,7 +291,8 @@ export const getAutoResolversAndDataloaders = (
 };
 
 export const getAutoSchemaAndResolvers = (
-  options: Pick<GaqServerOptions, 'autoTypes' | 'dbClient'>
+  options: Pick<GaqServerOptions, 'autoTypes' | 'dbClient'>,
+  dbCollectionNameMap: Map<string, string>
 ): {
   gaqSchema: string;
   gaqResolverDescriptions: GaqResolverDescription[];
@@ -299,7 +301,11 @@ export const getAutoSchemaAndResolvers = (
   const logger = getLogger();
   logger.debug('Building auto resolvers');
   const { gaqResolverDescriptions, gaqDataloaders } =
-    getAutoResolversAndDataloaders(options.autoTypes, options.dbClient);
+    getAutoResolversAndDataloaders(
+      options.autoTypes,
+      options.dbClient,
+      dbCollectionNameMap
+    );
 
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
@@ -338,10 +344,10 @@ export const getAutoSchemaAndResolvers = (
   return { gaqSchema, gaqResolverDescriptions, gaqDataloaders };
 };
 
-export const getDbCollectionNameMap = (
-  typeDefs: DocumentNode
-): Map<string, string> => {
-  const collectionMap = new Map<string, string>();
+export const setDbCollectionNameMap = (
+  typeDefs: DocumentNode,
+  dbCollectionNameMap: Map<string, string>
+): void => {
   visit(typeDefs, {
     ObjectTypeDefinition(node) {
       if (node.name.value === 'Query' || node.name.value === 'Mutation') {
@@ -355,12 +361,15 @@ export const getDbCollectionNameMap = (
           (arg) => arg.name.value === 'collectionName'
         );
         if (collectionNameArg?.value.kind === Kind.STRING) {
-          collectionMap.set(node.name.value, collectionNameArg.value.value);
+          dbCollectionNameMap.set(
+            node.name.value,
+            collectionNameArg.value.value
+          );
         }
       }
     },
   });
-  return collectionMap;
+  return;
 };
 
 export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
@@ -376,8 +385,9 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   gaqDataloaders: Map<string, DataLoader<any, any, any>>;
 } => {
   const logger = getLogger();
+  const dbCollectionNameMap = new Map<string, string>();
   const { gaqSchema, gaqResolverDescriptions, gaqDataloaders } =
-    getAutoSchemaAndResolvers(options);
+    getAutoSchemaAndResolvers(options, dbCollectionNameMap);
   const autoTypesDefs = gql`
     ${gaqSchema}
   `;
@@ -390,7 +400,7 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     ? mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs])
     : autoTypesDefs;
 
-  const dbCollectionNameMap = getDbCollectionNameMap(typeDefs);
+  setDbCollectionNameMap(typeDefs, dbCollectionNameMap);
 
   logger.debug('Merged schema');
   const resolvers = generateResolvers<TContext>({

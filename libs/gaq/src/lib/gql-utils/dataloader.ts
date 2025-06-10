@@ -2,9 +2,9 @@ import {
   GaqDbClient,
   GaqFieldResolverDescription,
   GaqLogger,
-  GaqResolverDescription,
 } from '../interfaces/common.interfaces';
-import * as DataLoader from 'dataloader';
+import DataLoader = require('dataloader');
+import { getLogger } from '../logger';
 
 const matchingFnForArrays = <T extends object = object>(
   fieldsResolverOption: GaqFieldResolverDescription,
@@ -35,57 +35,49 @@ const matchingFnForEntity = <T extends object = object>(
   });
 };
 
-export const batchLoadFn = <
-  T extends object = object,
-  K extends object = object
->(
+export const batchLoadFn = <T extends object = object>(
   fieldResolver: GaqFieldResolverDescription,
-  gaqResolverDescription: GaqResolverDescription,
+  dbCollectionNameMap: Map<string, string>,
   gaqDbClient: GaqDbClient,
   logger: GaqLogger
 ): DataLoader.BatchLoadFn<string, T | T[] | null> => {
-  return async (keys: string[]) => {
+  return async (keys: readonly string[]): Promise<T[] | T[][]> => {
+    const dbCollectionName = dbCollectionNameMap.get(fieldResolver.fieldType);
     logger.debug(
-      `Getting data from ${gaqResolverDescription.dbCollectionName} for keys ${keys}`
+      `Getting data from ${dbCollectionName} for keys ${keys} with dataloader`
     );
-    const collectionClient = gaqDbClient.collection(
-      gaqResolverDescription.dbCollectionName
-    );
+    const collectionClient = gaqDbClient.getCollectionAdapter(dbCollectionName);
     if (!collectionClient) {
-      logger.error(
-        `No collection client found for ${gaqResolverDescription.dbCollectionName}`
-      );
-      return [];
+      logger.error(`No collection client found for ${dbCollectionName}`);
+      return new Array(keys.length).fill(null);
     }
     try {
       const values = await collectionClient.getValuesInField({
         field: fieldResolver.fieldKey,
-        values: keys,
+        values: keys as any,
       });
-      logger.debug(
-        `Found ${values.length} values for ${gaqResolverDescription.dbCollectionName}`
-      );
+      logger.debug(`Found ${values.length} values for ${dbCollectionName}`);
       return fieldResolver.isArray
         ? matchingFnForArrays(fieldResolver, values, keys)
         : matchingFnForEntity(fieldResolver, values, keys);
     } catch (error) {
       logger.error(
-        `Error getting data from ${gaqResolverDescription.dbCollectionName} for keys ${keys}`
+        `Error getting data from ${dbCollectionName} for keys ${keys}`
       );
       logger.error(error);
-      return [];
+      return new Array(keys.length).fill(null);
     }
   };
 };
 
 export const getNewDataLoaderFromFieldResolver = (
   fieldResolver: GaqFieldResolverDescription,
-  gaqResolverDescription: GaqResolverDescription,
-  gaqDbClient: GaqDbClient,
-  logger: GaqLogger
+  dbCollectionNameMap: Map<string, string>,
+  gaqDbClient: GaqDbClient
 ) => {
   const dataloader = new DataLoader<any, any, any>(
-    batchLoadFn(fieldResolver, gaqResolverDescription, gaqDbClient, logger)
+    batchLoadFn(fieldResolver, dbCollectionNameMap, gaqDbClient, getLogger()),
+    { cache: false }
   );
   return dataloader;
 };

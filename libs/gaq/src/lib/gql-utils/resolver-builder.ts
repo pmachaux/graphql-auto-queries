@@ -24,7 +24,7 @@ const getStandardResolver = (
   ) => {
     logger.debug(`Getting standard resolver for ${linkedType}`);
     const collectionClient =
-      contextValue.gaqDbClient.collection(dbCollectionName);
+      contextValue.gaqDbClient.getCollectionAdapter(dbCollectionName);
     if (!collectionClient || !isNullOrUndefinedOrEmptyObject(parent)) {
       logger.debug(
         `No collection client or parent found for ${dbCollectionName}`
@@ -69,7 +69,7 @@ const getFieldResolver = (
     );
 
     const collectionClient =
-      contextValue.gaqDbClient.collection(dbCollectionName);
+      contextValue.gaqDbClient.getCollectionAdapter(dbCollectionName);
     if (!collectionClient || isNullOrUndefinedOrEmptyObject(parent)) {
       logger.debug(`No collection client found for ${dbCollectionName}`);
       return fieldResolverDescription.isArray ? [] : null;

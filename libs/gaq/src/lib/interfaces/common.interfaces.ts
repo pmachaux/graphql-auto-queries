@@ -8,7 +8,7 @@ import {
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
 import { GraphQLSchema } from 'graphql';
-import DataLoader = require('dataloader');
+import type DataLoader = require('dataloader');
 
 export interface GaqLogger {
   info: (message: any) => void;
@@ -130,11 +130,9 @@ export interface GaqCollectionClient<T extends object> {
 }
 
 export interface GaqDbClient {
-  collection: (collectionName: string) => GaqCollectionClient<any> | null;
-}
-
-export interface GaqDbConnector {
-  connect: () => Promise<GaqDbClient>;
+  getCollectionAdapter: (
+    collectionName: string
+  ) => GaqCollectionClient<any> | null;
 }
 
 /**************************************************

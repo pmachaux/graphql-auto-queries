@@ -40,7 +40,7 @@ describe('getResolversFromDescriptions', () => {
 
     const mockContext = {
       gaqDbClient: {
-        collection: jest.fn().mockImplementation((type) => ({
+        getCollectionAdapter: jest.fn().mockImplementation((type) => ({
           getFromGaqFilters: jest.fn().mockResolvedValue([]),
           getByField: jest.fn().mockResolvedValue([]),
         })),
@@ -58,7 +58,9 @@ describe('getResolversFromDescriptions', () => {
     // Test resolver execution
     const bookResolver = resolvers.Query.bookGaqQueryResult;
     const result = bookResolver(null, { filter: {} } as any, mockContext, null);
-    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('books');
+    expect(mockContext.gaqDbClient.getCollectionAdapter).toHaveBeenCalledWith(
+      'books'
+    );
     expect(result).resolves.toEqual({ count: 0, result: [] });
   });
 
@@ -75,7 +77,7 @@ describe('getResolversFromDescriptions', () => {
 
     const mockContext = {
       gaqDbClient: {
-        collection: jest.fn(),
+        getCollectionAdapter: jest.fn(),
       },
       gaqDataloaders,
     };
@@ -107,7 +109,7 @@ describe('getResolversFromDescriptions', () => {
 
     const mockContext = {
       gaqDbClient: {
-        collection: jest.fn().mockReturnValue(null),
+        getCollectionAdapter: jest.fn().mockReturnValue(null),
       },
       gaqDataloaders,
     };
@@ -119,7 +121,9 @@ describe('getResolversFromDescriptions', () => {
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(null, { filter: {} } as any, mockContext, null);
     expect(result).toBeNull();
-    expect(mockContext.gaqDbClient.collection).toHaveBeenCalledWith('users');
+    expect(mockContext.gaqDbClient.getCollectionAdapter).toHaveBeenCalledWith(
+      'users'
+    );
   });
 
   describe('generateResolvers', () => {

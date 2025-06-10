@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import {
-  GaqDbConnector,
+  GaqDbClient,
   GaqFilterQuery,
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
@@ -27,64 +27,61 @@ export const getMockedDatasource = (spies?: {
   bookSpy?: Function;
   authorSpy?: Function;
   reviewSpy?: Function;
-}): GaqDbConnector => {
+}): GaqDbClient => {
   return {
-    connect: async () => {
-      return {
-        collection: (collectionName: string) => {
-          if (collectionName === 'books') {
-            return {
-              getFromGaqFilters: async (
-                filters: GaqRootQueryFilter<{ title: string; authorId: string }>
-              ) => {
-                spies?.bookSpy?.(filters);
-                if (filters.and.length === 0) {
-                  return books;
-                }
-                return books.filter((book) => {
-                  return (
-                    book.title ===
-                    (
-                      filters.and[0] as GaqFilterQuery<
-                        { title: string; authorId: string },
-                        'title'
-                      >
-                    ).value
-                  );
-                });
-              },
-            };
-          }
-          if (collectionName === 'authors') {
-            return {
-              getByField: async ({
-                field,
-                value,
-              }: {
-                field: string;
-                value: string;
-              }) => {
-                spies?.authorSpy?.({ field, value });
-                return authors.filter((a) => a[field] === value);
-              },
-            };
-          }
-          if (collectionName === 'reviews') {
-            return {
-              getByField: async ({
-                field,
-                value,
-              }: {
-                field: string;
-                value: string;
-              }) => {
-                spies?.reviewSpy?.({ field, value });
-                return reviews.filter((a) => a[field] === value);
-              },
-            };
-          }
-        },
-      };
+    getCollectionAdapter: (collectionName: string) => {
+      if (collectionName === 'books') {
+        return {
+          getValuesInField: async () => [],
+          getFromGaqFilters: async (
+            filters: GaqRootQueryFilter<{ title: string; authorId: string }>
+          ) => {
+            spies?.bookSpy?.(filters);
+            if (filters.and.length === 0) {
+              return books;
+            }
+            return books.filter((book) => {
+              return (
+                book.title ===
+                (
+                  filters.and[0] as GaqFilterQuery<
+                    { title: string; authorId: string },
+                    'title'
+                  >
+                ).value
+              );
+            });
+          },
+        };
+      }
+      if (collectionName === 'authors') {
+        return {
+          getValuesInField: async ({
+            field,
+            values,
+          }: {
+            field: string;
+            values: string[];
+          }) => {
+            spies?.authorSpy?.({ field, values });
+            return authors.filter((a) => values.includes(a[field]));
+          },
+        };
+      }
+      if (collectionName === 'reviews') {
+        return {
+          getValuesInField: async ({
+            field,
+            values,
+          }: {
+            field: string;
+            values: string[];
+          }) => {
+            spies?.reviewSpy?.({ field, values });
+            return reviews.filter((a) => values.includes(a[field]));
+          },
+        };
+      }
     },
-  } as any;
+  } as GaqDbClient;
 };

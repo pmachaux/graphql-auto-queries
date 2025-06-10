@@ -12,12 +12,13 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 - **Customizable logging**
 - **Extensible with Apollo Server options**
 - **Route guards, authorization, authentication**
+- **N+1 problem handled automatically with dataloaders**
 
 ## Incoming features
 
-- Auto-generate dataloaders to solve the n+1 problems
 - Mongo DB connector
 - Federation support as subgraph
+- PostGres connector
 
 ## Usage Example
 
@@ -125,6 +126,12 @@ To use them simply pass in your auto-queries something like:
   },
 }
 ```
+
+#### Limitations on filtering
+
+Filtering will only work on properties directly in the queries collection.
+It does NOT work on resolved fields.
+If you want to query on nested fields you need to use document database such as Mongo and have every information you need directly in the collection.
 
 #### FilterComparators.IN
 

@@ -15,7 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@gaq": ["libs/gaq/src/index.ts"]
+      "@gaq": ["libs/gaq/src/index.ts"],
+      "@gaq/mongo": ["libs/db-connectors/mongo/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

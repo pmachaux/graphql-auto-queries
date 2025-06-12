@@ -44,25 +44,35 @@ export const batchLoadFn = <T extends object = object>(
   return async (keys: readonly string[]): Promise<T[] | T[][]> => {
     const dbCollectionName = dbCollectionNameMap.get(fieldResolver.fieldType);
     logger.debug(
-      `Getting data from ${dbCollectionName} for keys ${keys} with dataloader`
+      `[${fieldResolver.dataloaderName}] Getting data from ${dbCollectionName} for keys ${keys} with dataloader`
     );
     const collectionClient = gaqDbClient.getCollectionAdapter(dbCollectionName);
     if (!collectionClient) {
-      logger.error(`No collection client found for ${dbCollectionName}`);
+      logger.warn(
+        `[${fieldResolver.dataloaderName}] No collection client found for ${dbCollectionName}`
+      );
       return new Array(keys.length).fill(null);
     }
     try {
-      const values = await collectionClient.getValuesInField({
-        field: fieldResolver.fieldKey,
-        values: keys as any,
-      });
-      logger.debug(`Found ${values.length} values for ${dbCollectionName}`);
+      const values = await collectionClient.getValuesInField(
+        {
+          field: fieldResolver.fieldKey,
+          values: keys as any,
+        },
+        {
+          logger,
+          traceId: fieldResolver.dataloaderName,
+        }
+      );
+      logger.debug(
+        `[${fieldResolver.dataloaderName}] Found ${values.length} values for ${dbCollectionName}`
+      );
       return fieldResolver.isArray
         ? matchingFnForArrays(fieldResolver, values, keys)
         : matchingFnForEntity(fieldResolver, values, keys);
     } catch (error) {
       logger.error(
-        `Error getting data from ${dbCollectionName} for keys ${keys}`
+        `[${fieldResolver.dataloaderName}] Error getting data from ${dbCollectionName} for keys ${keys}`
       );
       logger.error(error);
       return new Array(keys.length).fill(null);

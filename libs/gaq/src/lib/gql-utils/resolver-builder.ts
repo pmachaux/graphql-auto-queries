@@ -22,22 +22,32 @@ const getStandardResolver = (
     contextValue: GaqContext,
     info: any
   ) => {
-    logger.debug(`Getting standard resolver for ${linkedType}`);
+    logger.debug(
+      `[${contextValue.traceId}] Getting standard resolver for ${linkedType}`
+    );
     const collectionClient =
       contextValue.gaqDbClient.getCollectionAdapter(dbCollectionName);
     if (!collectionClient || !isNullOrUndefinedOrEmptyObject(parent)) {
       logger.debug(
-        `No collection client or parent found for ${dbCollectionName}`
+        `[${contextValue.traceId}] No collection client or parent found for ${dbCollectionName}`
       );
       return null;
     }
-    logger.debug(`Getting data from collection ${dbCollectionName}`);
+    logger.debug(
+      `[${contextValue.traceId}] Getting data from collection ${dbCollectionName}`
+    );
 
     return collectionClient
-      .getFromGaqFilters(args.filters)
+      .getFromGaqFilters(args.filters, {
+        logger,
+        sort: args.filters.sort,
+        limit: args.filters.limit,
+        offset: args.filters.offset,
+        traceId: contextValue.traceId,
+      })
       .then((data) => {
         logger.debug(
-          `Data for ${linkedType} fetched, returning ${data.length} items`
+          `[${contextValue.traceId}] Data for ${linkedType} fetched, returning ${data.length} items`
         );
         return {
           result: data,
@@ -45,7 +55,9 @@ const getStandardResolver = (
         };
       })
       .catch((error) => {
-        logger.error(`Error fetching data for ${linkedType}: ${error}`);
+        logger.error(
+          `[${contextValue.traceId}] Error fetching data for ${linkedType}: ${error}`
+        );
         throw new Error(GaqErrorCodes.INTERNAL_SERVER_ERROR);
       });
   };
@@ -54,37 +66,44 @@ const getStandardResolver = (
 };
 
 const getFieldResolver = (
-  fieldResolverDescription: GaqFieldResolverDescription,
-  dbCollectionName: string
+  fieldResolverDescription: GaqFieldResolverDescription
 ): GaqSchemaLevelResolver => {
   const logger = getLogger();
   const fieldResolver: GaqSchemaLevelResolver = (
     parent: any,
-    args: { filters: GaqRootQueryFilter<any> },
+    args: any,
     contextValue: GaqContext,
     info: any
   ) => {
     logger.debug(
-      `Getting field resolver for ${fieldResolverDescription.fieldName}`
+      `[${contextValue.traceId}] Getting field resolver for ${fieldResolverDescription.fieldName}`
     );
-
-    const collectionClient =
-      contextValue.gaqDbClient.getCollectionAdapter(dbCollectionName);
-    if (!collectionClient || isNullOrUndefinedOrEmptyObject(parent)) {
-      logger.debug(`No collection client found for ${dbCollectionName}`);
-      return fieldResolverDescription.isArray ? [] : null;
-    }
-    logger.debug(`Getting data from collection ${dbCollectionName}`);
 
     const dataloader = contextValue.gaqDataloaders.get(
       fieldResolverDescription.dataloaderName
     );
     if (!dataloader) {
+      logger.error(
+        `[${contextValue.traceId}] Dataloader ${fieldResolverDescription.dataloaderName} not found`
+      );
       throw new Error(
         `Dataloader ${fieldResolverDescription.dataloaderName} not found`
       );
     }
-    return dataloader.load(parent[fieldResolverDescription.parentKey]);
+    return dataloader
+      .load(parent[fieldResolverDescription.parentKey])
+      .then((data) => {
+        logger.debug(
+          `[${contextValue.traceId}] Data for ${fieldResolverDescription.fieldName} fetched, returning ${data.length} items`
+        );
+        return data;
+      })
+      .catch((error) => {
+        logger.error(
+          `[${contextValue.traceId}] Error fetching data for ${fieldResolverDescription.fieldName}: ${error}`
+        );
+        throw new Error(GaqErrorCodes.INTERNAL_SERVER_ERROR);
+      });
   };
 
   return fieldResolver;
@@ -110,10 +129,8 @@ const getQueryAndFieldResolver = (
         `No db collection name found for type ${fieldResolver.fieldType}`
       );
     }
-    fieldResolversForLinkedType[fieldResolver.fieldName] = getFieldResolver(
-      fieldResolver,
-      dbCollectionName
-    );
+    fieldResolversForLinkedType[fieldResolver.fieldName] =
+      getFieldResolver(fieldResolver);
   });
   if (isNullOrUndefinedOrEmptyObject(fieldResolversForLinkedType)) {
     return {

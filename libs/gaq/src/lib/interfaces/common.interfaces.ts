@@ -20,6 +20,7 @@ export interface GaqLogger {
 export interface GaqContext extends BaseContext {
   gaqDbClient: GaqDbClient;
   gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+  traceId: string;
 }
 
 /**
@@ -116,16 +117,19 @@ export type GaqSchemaLevelResolver<TParent extends object = object> =
 export type GaqDbQueryOptions = {
   sort?: GaqSortingParam[] /* Sorting order is important, first element in array is sorted first */;
   limit?: number;
+  offset?: number;
+  logger: GaqLogger;
+  traceId: string;
 };
 
 export interface GaqCollectionClient<T extends object> {
   getFromGaqFilters(
-    filters?: GaqRootQueryFilter<T> | undefined,
-    opts?: { traceId?: string } & GaqDbQueryOptions
+    filters: GaqRootQueryFilter<T>,
+    opts: GaqDbQueryOptions
   ): Promise<Array<T>>;
   getValuesInField(
     payload: { field: string; values: any[] },
-    opts?: { traceId?: string } & GaqDbQueryOptions
+    opts: GaqDbQueryOptions
   ): Promise<T[]>;
 }
 

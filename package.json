@@ -56,6 +56,7 @@
     "axios": "^1.6.0",
     "dataloader": "^2.2.3",
     "graphql": "^16.11.0",
-    "graphql-tag": "^2.12.6"
+    "graphql-tag": "^2.12.6",
+    "mongodb": "^6.17.0"
   }
 }

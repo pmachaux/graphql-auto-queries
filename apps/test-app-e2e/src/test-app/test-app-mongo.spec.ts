@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
 
-describe('CLI tests', () => {
+describe('Testing Gaq With Mongo connector', () => {
   it('should print a message', () => {
     const cliPath = join(process.cwd(), 'dist/apps/test-app');
 

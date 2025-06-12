@@ -3,8 +3,13 @@ import {
   getAutoSchemaAndResolvers,
   setDbCollectionNameMap,
 } from './schema-analyzer';
+import { getTestLogger } from '../test-utils/test-logger';
+import { setLogger } from '../logger';
 
 describe('schema-analyzer', () => {
+  beforeAll(() => {
+    setLogger(getTestLogger());
+  });
   describe('getDbCollectionNameMap', () => {
     it('should extract collection names from type definitions', () => {
       const typeDefs = `
@@ -169,7 +174,6 @@ describe('schema-analyzer', () => {
         options,
         new Map<string, string>()
       );
-      console.log('gaqResolverDescriptions', gaqResolverDescriptions);
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
         resultType: 'BookGaqResult',

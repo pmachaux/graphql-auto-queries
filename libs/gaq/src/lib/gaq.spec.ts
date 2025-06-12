@@ -8,12 +8,14 @@ import {
 import * as request from 'supertest';
 import { getDirective, MapperKind, SchemaMapper } from '@graphql-tools/utils';
 import { defaultFieldResolver, GraphQLSchema } from 'graphql';
+import { getTestLogger } from './test-utils/test-logger';
 describe('gaq', () => {
   describe('basic features', () => {
     let server: GaqServer;
     let url: string;
     beforeAll(async () => {
       server = getGraphQLAutoQueriesServer({
+        logger: getTestLogger(),
         autoTypes: `
           type Book @dbCollection(collectionName: "books"){
             id: ID
@@ -109,7 +111,6 @@ describe('gaq', () => {
         },
       };
       const response = await request(url).post('/').send(queryData);
-      console.log(response.body.data.bookGaqQueryResult.result);
       expect(response.body.errors).toBeUndefined();
       expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
         title: 'The Great Gatsby',
@@ -168,6 +169,7 @@ describe('gaq', () => {
       authorSpy = jest.fn();
       reviewSpy = jest.fn();
       server = getGraphQLAutoQueriesServer({
+        logger: getTestLogger(),
         autoTypes: `
           type Book @dbCollection(collectionName: "books"){
             id: ID
@@ -288,6 +290,7 @@ describe('gaq', () => {
     let getUserFn: jest.Mock;
     beforeAll(async () => {
       protectedServer = getGraphQLAutoQueriesServer({
+        logger: getTestLogger(),
         autoTypes: `
           directive @auth(
             role: String!,

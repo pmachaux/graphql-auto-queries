@@ -15,6 +15,7 @@ import { WithRequired } from './interfaces/ts-wizard.interface';
 import { getLogger, setLogger } from './logger';
 import { GraphQLSchema } from 'graphql';
 import * as DataLoader from 'dataloader';
+import { randomUUID } from 'crypto';
 
 export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
   config: GaqServerOptions
@@ -60,6 +61,7 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
           ...apolloContext,
           gaqDbClient: config.dbClient,
           gaqDataloaders,
+          traceId: randomUUID(),
         } as unknown as TContext;
       };
       const optionsWithGaqContext = {

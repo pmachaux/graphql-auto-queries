@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "nx affected:test",
+    "test": "nx test gaq && nx test mongo",
     "build": "nx affected:build",
     "lint": "nx affected:lint",
     "start": "nx serve test-app"

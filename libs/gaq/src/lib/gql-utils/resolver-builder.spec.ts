@@ -4,6 +4,8 @@ import {
 } from './resolver-builder';
 import { GaqResolverDescription } from '../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
+import { getTestLogger } from '../test-utils/test-logger';
+import { setLogger } from '../logger';
 
 describe('getResolversFromDescriptions', () => {
   let dbCollectionNameMap: Map<string, string>;
@@ -11,6 +13,7 @@ describe('getResolversFromDescriptions', () => {
   let BookauthorDataloader: jest.Mock;
   let BookreviewsDataloader: jest.Mock;
   beforeEach(() => {
+    setLogger(getTestLogger());
     dbCollectionNameMap = new Map([
       ['Book', 'books'],
       ['Author', 'authors'],
@@ -46,6 +49,7 @@ describe('getResolversFromDescriptions', () => {
         })),
       },
       gaqDataloaders,
+      traceId: 'test',
     };
 
     const resolvers = getResolversFromDescriptions(
@@ -57,7 +61,12 @@ describe('getResolversFromDescriptions', () => {
 
     // Test resolver execution
     const bookResolver = resolvers.Query.bookGaqQueryResult;
-    const result = bookResolver(null, { filter: {} } as any, mockContext, null);
+    const result = bookResolver(
+      null,
+      { filters: {} } as any,
+      mockContext,
+      null
+    );
     expect(mockContext.gaqDbClient.getCollectionAdapter).toHaveBeenCalledWith(
       'books'
     );
@@ -80,6 +89,7 @@ describe('getResolversFromDescriptions', () => {
         getCollectionAdapter: jest.fn(),
       },
       gaqDataloaders,
+      traceId: 'test',
     };
 
     const resolvers = getResolversFromDescriptions(
@@ -89,7 +99,7 @@ describe('getResolversFromDescriptions', () => {
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(
       { someData: 'test' },
-      { filter: {} } as any,
+      { filters: {} } as any,
       mockContext,
       null
     );
@@ -112,6 +122,7 @@ describe('getResolversFromDescriptions', () => {
         getCollectionAdapter: jest.fn().mockReturnValue(null),
       },
       gaqDataloaders,
+      traceId: 'test',
     };
 
     const resolvers = getResolversFromDescriptions(
@@ -119,7 +130,12 @@ describe('getResolversFromDescriptions', () => {
       dbCollectionNameMap
     );
     const userResolver = resolvers.Query.userGaqQueryResult;
-    const result = userResolver(null, { filter: {} } as any, mockContext, null);
+    const result = userResolver(
+      null,
+      { filters: {} } as any,
+      mockContext,
+      null
+    );
     expect(result).toBeNull();
     expect(mockContext.gaqDbClient.getCollectionAdapter).toHaveBeenCalledWith(
       'users'

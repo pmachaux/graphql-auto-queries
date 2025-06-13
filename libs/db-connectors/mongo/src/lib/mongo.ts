@@ -1,4 +1,4 @@
-import { Db, MongoClient } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import {
   GaqDbAdapter,
   GaqCollectionClient,
@@ -44,7 +44,16 @@ const getCollectionAdapter = <T extends object>(
       });
     },
     getValuesInField: async (payload, opts: GaqDbQueryOptions) => {
-      const mongoQuery = { [payload.field]: { $in: payload.values } };
+      const mongoQuery = {
+        [payload.field]: {
+          $in: payload.values.flatMap((v) => {
+            if (ObjectId.isValid(v) && typeof v === 'string') {
+              return [v, new ObjectId(v)];
+            }
+            return v;
+          }),
+        },
+      };
       opts.logger.debug(
         `[${opts.traceId}] Querying mongo collection ${collectionName}`
       );

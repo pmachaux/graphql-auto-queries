@@ -48,6 +48,9 @@ const getCollectionAdapter = <T extends object>(
       opts.logger.debug(
         `[${opts.traceId}] Querying mongo collection ${collectionName}`
       );
+      opts.logger.debug(
+        `[${opts.traceId}] Mongo query: ${JSON.stringify(mongoQuery)}`
+      );
       const result = await collection.find(mongoQuery).toArray();
       opts.logger.debug(
         `[${opts.traceId}] Mongo query succedeed ${result.length} items`

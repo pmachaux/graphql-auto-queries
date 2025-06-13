@@ -5,7 +5,7 @@ import {
   GaqFilterQueryOnArrayElementMatch,
   GaqRootQueryFilter,
 } from '@gaq';
-import { Condition } from 'mongodb';
+import { Condition, ObjectId } from 'mongodb';
 
 type MongoFilterQuery<T extends object> = {
   [key in keyof T | (string & {})]?: Condition<T>;
@@ -41,6 +41,93 @@ const omit = <T extends object, K extends keyof T>(
   return obj;
 };
 
+const handleIdFilter = <T extends object>(
+  filter: GaqFilterQuery<T>
+): MongoFilterQuery<T> => {
+  if (filter.comparator === GaqFilterComparators.EQUAL) {
+    const orConditions: Condition<T>[] = [{ _id: filter.value }];
+    // Check if value is a valid ObjectId string
+    if (ObjectId.isValid(filter.value)) {
+      orConditions.push({ _id: new ObjectId(filter.value) } as Condition<T>);
+    }
+    return { $or: orConditions };
+  }
+  if (filter.comparator === GaqFilterComparators.NOT_EQUAL) {
+    const andConditions: Condition<T>[] = [{ _id: { $ne: filter.value } }];
+    // Check if value is a valid ObjectId string
+    if (ObjectId.isValid(filter.value)) {
+      andConditions.push({
+        _id: { $ne: new ObjectId(filter.value) },
+      } as Condition<T>);
+    }
+    return { $and: andConditions };
+  }
+  if (filter.comparator === GaqFilterComparators.GREATER) {
+    const orConditions: Condition<T>[] = [{ _id: { $gte: filter.value } }];
+    // Check if value is a valid ObjectId string
+    if (ObjectId.isValid(filter.value)) {
+      orConditions.push({
+        _id: { $gte: new ObjectId(filter.value) },
+      } as Condition<T>);
+    }
+    return { $or: orConditions };
+  }
+  if (filter.comparator === GaqFilterComparators.STRICTLY_GREATER) {
+    const orConditions: Condition<T>[] = [{ _id: { $gt: filter.value } }];
+    // Check if value is a valid ObjectId string
+    if (ObjectId.isValid(filter.value)) {
+      orConditions.push({
+        _id: { $gt: new ObjectId(filter.value) },
+      } as Condition<T>);
+    }
+    return { $or: orConditions };
+  }
+  if (filter.comparator === GaqFilterComparators.LOWER) {
+    const orConditions: Condition<T>[] = [{ _id: { $lte: filter.value } }];
+    // Check if value is a valid ObjectId string
+    if (ObjectId.isValid(filter.value)) {
+      orConditions.push({
+        _id: { $lte: new ObjectId(filter.value) },
+      } as Condition<T>);
+    }
+    return { $or: orConditions };
+  }
+  if (filter.comparator === GaqFilterComparators.STRICTLY_LOWER) {
+    const orConditions: Condition<T>[] = [{ _id: { $lt: filter.value } }];
+    // Check if value is a valid ObjectId string
+    if (ObjectId.isValid(filter.value)) {
+      orConditions.push({
+        _id: { $lt: new ObjectId(filter.value) },
+      } as Condition<T>);
+    }
+    return { $or: orConditions };
+  }
+  if (
+    filter.comparator === GaqFilterComparators.IN ||
+    filter.comparator === GaqFilterComparators.ARRAY_CONTAINS_ANY
+  ) {
+    const valuesIn = filter.value.flatMap((value) => {
+      if (typeof value === 'string' && ObjectId.isValid(value)) {
+        return [value, new ObjectId(value)];
+      }
+      return value;
+    });
+    return { _id: { $in: valuesIn } };
+  }
+  if (filter.comparator === GaqFilterComparators.NOT_IN) {
+    const valuesNin = filter.value.flatMap((value) => {
+      if (typeof value === 'string' && ObjectId.isValid(value)) {
+        return [value, new ObjectId(value)];
+      }
+      return value;
+    });
+    return { _id: { $nin: valuesNin } };
+  }
+  throw new Error(
+    `Invalid filters: Comparator ${filter.comparator} is not applicable to field _id`
+  );
+};
+
 const equalQueryFn: ConditionAdapterFn = <T extends object>(
   filter: GaqFilterQuery<T>
 ): Condition<T> => {
@@ -64,7 +151,7 @@ const strictyGreaterQueryFn: ConditionAdapterFn = <T extends object>(
 const lowerQueryFn: ConditionAdapterFn = <T extends object>(
   filter: GaqFilterQuery<T>
 ): Condition<T> => {
-  return { $lte: filter.value } as Condition<T>;
+  return { $lte: filter.value };
 };
 const strictlyLowerQueryFn: ConditionAdapterFn = <T extends object>(
   filter: GaqFilterQuery<T>
@@ -108,6 +195,15 @@ const arrayContainsAnyQueryFn: ConditionAdapterFn = <T extends object>(
     throw new Error(
       `Invalid filters: Comparator ARRAY_CONTAINS_ANY requires an array of values for field ${filter.key}`
     );
+  }
+  if (filter.key === '_id') {
+    const valuesIn = filter.value.flatMap((value) => {
+      if (typeof value === 'string' && ObjectId.isValid(value)) {
+        return [value, new ObjectId(value)];
+      }
+      return value;
+    });
+    return { $in: valuesIn };
   }
   return { $in: filter.value };
 };
@@ -157,7 +253,12 @@ const transformFilterQuery = <T extends object>(
   if (!adapterFn) {
     throw new Error(`Comparator ${filter.comparator} is not valid`);
   }
+
+  if (filter.key === '_id') {
+    return handleIdFilter(filter);
+  }
   const mongoQuery = adapterFn(filter);
+
   return {
     [filter.key]: mongoQuery,
   } as MongoFilterQuery<T>;

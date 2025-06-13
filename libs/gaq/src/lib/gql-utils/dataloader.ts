@@ -44,7 +44,7 @@ export const batchLoadFn = <T extends object = object>(
   return async (keys: readonly string[]): Promise<T[] | T[][]> => {
     const dbCollectionName = dbCollectionNameMap.get(fieldResolver.fieldType);
     logger.debug(
-      `[${fieldResolver.dataloaderName}] Getting data from ${dbCollectionName} for keys ${keys} with dataloader`
+      `[${fieldResolver.dataloaderName}] Getting data from ${dbCollectionName} for values ${keys} with dataloader`
     );
     const collectionClient = gaqDbClient.getCollectionAdapter(dbCollectionName);
     if (!collectionClient) {

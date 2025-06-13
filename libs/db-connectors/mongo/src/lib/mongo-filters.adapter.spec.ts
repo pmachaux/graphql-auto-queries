@@ -1,5 +1,6 @@
 import { GaqFilterComparators, GaqRootQueryFilter } from '@gaq';
 import { getMongoFilters } from './mongo-filters.adapter';
+import { ObjectId } from 'mongodb';
 
 describe('mongo filters adapter', () => {
   describe('getMongoFilters', () => {
@@ -515,5 +516,196 @@ describe('mongo filters adapter', () => {
         result['$and']?.[1]?.['$or']?.[1]?.['answers.value']?.['$eq']
       ).toBe('Yes');
     });
+    it('should handle _id filter with equal comparator', () => {
+      const queryFilterSimpleString: GaqRootQueryFilter<{
+        _id: string;
+      }> = {
+        and: [
+          { key: '_id', value: '123', comparator: GaqFilterComparators.EQUAL },
+        ],
+      };
+      const resultSimpleString = getMongoFilters(queryFilterSimpleString);
+
+      expect(resultSimpleString['$and'][0]['$or'][0]['_id']).toBe('123');
+      expect(resultSimpleString['$and'][0]['$or'].length).toBe(1);
+
+      const queryFilterObjectId: GaqRootQueryFilter<{
+        _id: string;
+      }> = {
+        and: [
+          {
+            key: '_id',
+            value: '5a9427648b0beebeb6957ac8',
+            comparator: GaqFilterComparators.EQUAL,
+          },
+        ],
+      };
+      const resultObjectId = getMongoFilters(queryFilterObjectId);
+      console.log(resultObjectId['$and'][0]['_id']);
+      expect(resultObjectId['$and'][0]['$or'][0]['_id']).toBe(
+        '5a9427648b0beebeb6957ac8'
+      );
+      expect(
+        resultObjectId['$and'][0]['$or'][1]['_id'] instanceof ObjectId
+      ).toBe(true);
+      expect(resultObjectId['$and'][0]['$or'].length).toBe(2);
+    });
+  });
+  it('should handle _id filter with NOT_EQUAL comparator', () => {
+    const queryFilterSimpleString: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: '123',
+          comparator: GaqFilterComparators.NOT_EQUAL,
+        },
+      ],
+    };
+    const resultSimpleString = getMongoFilters(queryFilterSimpleString);
+    expect(resultSimpleString['$and'][0]['$and'][0]['_id']['$ne']).toBe('123');
+
+    const queryFilterObjectId: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: '5a9427648b0beebeb6957ac8',
+          comparator: GaqFilterComparators.NOT_EQUAL,
+        },
+      ],
+    };
+    const resultObjectId = getMongoFilters(queryFilterObjectId);
+    expect(resultObjectId['$and'][0]['$and'][0]['_id']['$ne']).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(
+      resultObjectId['$and'][0]['$and'][1]['_id']['$ne'] instanceof ObjectId
+    ).toBe(true);
+    expect(resultObjectId['$and'][0]['$and'].length).toBe(2);
+  });
+  it('should handle _id filter with GREATER comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: '5a9427648b0beebeb6957ac8',
+          comparator: GaqFilterComparators.GREATER,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['$or'][0]['_id']['$gte']).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['$or'][1]['_id']['$gte'] instanceof ObjectId).toBe(
+      true
+    );
+    expect(result['$and'][0]['$or'].length).toBe(2);
+  });
+  it('should handle _id filter with STRICTLY_GREATER comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: '5a9427648b0beebeb6957ac8',
+          comparator: GaqFilterComparators.STRICTLY_GREATER,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['$or'][0]['_id']['$gt']).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['$or'][1]['_id']['$gt'] instanceof ObjectId).toBe(
+      true
+    );
+    expect(result['$and'][0]['$or'].length).toBe(2);
+  });
+  it('should handle _id filter with LOWER comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: '5a9427648b0beebeb6957ac8',
+          comparator: GaqFilterComparators.LOWER,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['$or'][0]['_id']['$lte']).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['$or'][1]['_id']['$lte'] instanceof ObjectId).toBe(
+      true
+    );
+    expect(result['$and'][0]['$or'].length).toBe(2);
+  });
+  it('should handle _id filter with STRICTLY_LOWER comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: '5a9427648b0beebeb6957ac8',
+          comparator: GaqFilterComparators.STRICTLY_LOWER,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['$or'][0]['_id']['$lt']).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['$or'][1]['_id']['$lt'] instanceof ObjectId).toBe(
+      true
+    );
+    expect(result['$and'][0]['$or'].length).toBe(2);
+  });
+  it('should handle _id filter with IN comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: ['123', '5a9427648b0beebeb6957ac8'],
+          comparator: GaqFilterComparators.IN,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    console.log(result['$and'][0]);
+    expect(result['$and'][0]['_id']['$in'][0]).toBe('123');
+    expect(result['$and'][0]['_id']['$in'][1]).toBe('5a9427648b0beebeb6957ac8');
+    expect(result['$and'][0]['_id']['$in'][2] instanceof ObjectId).toBe(true);
+  });
+  it('should handle _id filter with NOT_IN comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: ['123', '5a9427648b0beebeb6957ac8'],
+          comparator: GaqFilterComparators.NOT_IN,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    console.log(result['$and'][0]);
+    expect(result['$and'][0]['_id']['$nin'][0]).toBe('123');
+    expect(result['$and'][0]['_id']['$nin'][1]).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['_id']['$nin'][2] instanceof ObjectId).toBe(true);
   });
 });

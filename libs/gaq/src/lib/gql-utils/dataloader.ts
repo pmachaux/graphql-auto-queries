@@ -1,5 +1,5 @@
 import {
-  GaqDbClient,
+  GaqDbAdapter,
   GaqFieldResolverDescription,
   GaqLogger,
 } from '../interfaces/common.interfaces';
@@ -38,7 +38,7 @@ const matchingFnForEntity = <T extends object = object>(
 export const batchLoadFn = <T extends object = object>(
   fieldResolver: GaqFieldResolverDescription,
   dbCollectionNameMap: Map<string, string>,
-  gaqDbClient: GaqDbClient,
+  gaqDbClient: GaqDbAdapter,
   logger: GaqLogger
 ): DataLoader.BatchLoadFn<string, T | T[] | null> => {
   return async (keys: readonly string[]): Promise<T[] | T[][]> => {
@@ -83,7 +83,7 @@ export const batchLoadFn = <T extends object = object>(
 export const getNewDataLoaderFromFieldResolver = (
   fieldResolver: GaqFieldResolverDescription,
   dbCollectionNameMap: Map<string, string>,
-  gaqDbClient: GaqDbClient
+  gaqDbClient: GaqDbAdapter
 ) => {
   const dataloader = new DataLoader<any, any, any>(
     batchLoadFn(fieldResolver, dbCollectionNameMap, gaqDbClient, getLogger()),

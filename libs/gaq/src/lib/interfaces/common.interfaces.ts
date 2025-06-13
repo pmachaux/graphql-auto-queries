@@ -18,7 +18,7 @@ export interface GaqLogger {
 }
 
 export interface GaqContext extends BaseContext {
-  gaqDbClient: GaqDbClient;
+  gaqDbClient: GaqDbAdapter;
   gaqDataloaders: Map<string, DataLoader<any, any, any>>;
   traceId: string;
 }
@@ -35,7 +35,7 @@ export interface GaqContext extends BaseContext {
 
 export type GaqOnlyServerOptions = {
   autoTypes: string;
-  dbClient: GaqDbClient;
+  dbAdapter: GaqDbAdapter;
   standardGraphqlTypes?: ApolloServerOptions<GaqContext>['typeDefs'];
   standardApolloResolvers?: IResolvers<
     { Query?: Record<string, any> } & Record<string, any>,
@@ -133,7 +133,7 @@ export interface GaqCollectionClient<T extends object> {
   ): Promise<T[]>;
 }
 
-export interface GaqDbClient {
+export interface GaqDbAdapter {
   getCollectionAdapter: (
     collectionName: string
   ) => GaqCollectionClient<any> | null;

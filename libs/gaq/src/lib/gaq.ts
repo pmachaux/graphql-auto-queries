@@ -14,7 +14,7 @@ import { ListenOptions } from 'net';
 import { WithRequired } from './interfaces/ts-wizard.interface';
 import { getLogger, setLogger } from './logger';
 import { GraphQLSchema } from 'graphql';
-import * as DataLoader from 'dataloader';
+import DataLoader = require('dataloader');
 import { randomUUID } from 'crypto';
 
 export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
@@ -59,7 +59,7 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
         const apolloContext = await options?.context?.({ req, res });
         return {
           ...apolloContext,
-          gaqDbClient: config.dbClient,
+          gaqDbClient: config.dbAdapter,
           gaqDataloaders,
           traceId: randomUUID(),
         } as unknown as TContext;

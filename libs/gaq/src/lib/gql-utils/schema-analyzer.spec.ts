@@ -119,7 +119,7 @@ describe('schema-analyzer', () => {
           authorId: String
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -165,7 +165,7 @@ describe('schema-analyzer', () => {
           name: String
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -212,7 +212,7 @@ describe('schema-analyzer', () => {
           book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -259,7 +259,7 @@ describe('schema-analyzer', () => {
     it('should handle empty auto types', () => {
       const options = {
         autoTypes: '',
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -282,7 +282,7 @@ describe('schema-analyzer', () => {
           authorId: String
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -300,7 +300,7 @@ describe('schema-analyzer', () => {
           authorId: String
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -324,7 +324,7 @@ describe('schema-analyzer', () => {
           name: String
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -353,7 +353,7 @@ describe('schema-analyzer', () => {
           rating: Int!
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };
@@ -404,7 +404,7 @@ describe('schema-analyzer', () => {
           books: [Book!]! @fieldResolver(parentKey: "id", fieldKey: "authorId")
         }
       `,
-        dbClient: {
+        dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
       };

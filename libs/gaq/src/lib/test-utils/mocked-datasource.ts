@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import {
-  GaqDbClient,
+  GaqDbAdapter,
   GaqFilterQuery,
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
@@ -27,7 +27,7 @@ export const getMockedDatasource = (spies?: {
   bookSpy?: Function;
   authorSpy?: Function;
   reviewSpy?: Function;
-}): GaqDbClient => {
+}): GaqDbAdapter => {
   return {
     getCollectionAdapter: (collectionName: string) => {
       if (collectionName === 'books') {
@@ -83,5 +83,5 @@ export const getMockedDatasource = (spies?: {
         };
       }
     },
-  } as GaqDbClient;
+  } as GaqDbAdapter;
 };

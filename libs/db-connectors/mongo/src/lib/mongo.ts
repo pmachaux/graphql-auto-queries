@@ -1,6 +1,6 @@
 import { Db, MongoClient } from 'mongodb';
 import {
-  GaqDbClient,
+  GaqDbAdapter,
   GaqCollectionClient,
   GaqRootQueryFilter,
   GaqDbQueryOptions,
@@ -38,7 +38,10 @@ const getCollectionAdapter = <T extends object>(
       opts.logger.debug(
         `[${opts.traceId}] Mongo query succedeed ${result.length} items`
       );
-      return result.map((item) => item.toJSON() as T);
+      return result.map((item) => {
+        const { _id, ...rest } = item;
+        return { _id: _id.toString(), ...rest } as T;
+      });
     },
     getValuesInField: async (payload, opts: GaqDbQueryOptions) => {
       const mongoQuery = { [payload.field]: { $in: payload.values } };
@@ -49,7 +52,10 @@ const getCollectionAdapter = <T extends object>(
       opts.logger.debug(
         `[${opts.traceId}] Mongo query succedeed ${result.length} items`
       );
-      return result.map((item) => item.toJSON() as T);
+      return result.map((item) => {
+        const { _id, ...rest } = item;
+        return { _id: _id.toString(), ...rest } as T;
+      });
     },
   };
 };
@@ -67,9 +73,16 @@ export async function getMongoGaqDbConnector({
 }: {
   uri: string;
   dbName: string;
-}): Promise<GaqDbClient> {
+}): Promise<{
+  dbAdapter: GaqDbAdapter;
+  client: MongoClient;
+}> {
   const client = new MongoClient(uri);
   await client.connect();
+
   const db = client.db(dbName);
-  return getDbAdapter(db);
+  return {
+    dbAdapter: getDbAdapter(db),
+    client,
+  };
 }

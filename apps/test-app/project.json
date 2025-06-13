@@ -12,8 +12,8 @@
       "options": {
         "platform": "node",
         "outputPath": "dist/apps/test-app",
-        "format": ["esm"],
-        "bundle": true,
+        "format": ["cjs"],
+        "bundle": false,
         "main": "apps/test-app/src/main.ts",
         "tsConfig": "apps/test-app/tsconfig.app.json",
         "assets": ["apps/test-app/src/assets"],
@@ -22,9 +22,6 @@
           "sourcemap": true,
           "outExtension": {
             ".js": ".js"
-          },
-          "alias": {
-            "@gaq": "libs/gaq/src/index.ts"
           }
         }
       },

@@ -13,7 +13,7 @@ import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
   GaqContext,
-  GaqDbClient,
+  GaqDbAdapter,
   GaqFieldResolverArguments,
   GaqFieldResolverDescription,
   GaqResolverDescription,
@@ -27,7 +27,7 @@ import { generateResolvers } from './resolver-builder';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
 import { mapSchema } from '@graphql-tools/utils';
-import * as DataLoader from 'dataloader';
+import DataLoader = require('dataloader');
 import { getNewDataLoaderFromFieldResolver } from './dataloader';
 
 const gaqDefaultScalarsAndInputs = `
@@ -243,7 +243,7 @@ const getFieldResolversFromProperties = (
 
 export const getAutoResolversAndDataloaders = (
   autoTypes: string,
-  gaqDbClient: GaqDbClient,
+  gaqDbClient: GaqDbAdapter,
   dbCollectionNameMap: Map<string, string>
 ): {
   gaqResolverDescriptions: GaqResolverDescription[];
@@ -291,7 +291,7 @@ export const getAutoResolversAndDataloaders = (
 };
 
 export const getAutoSchemaAndResolvers = (
-  options: Pick<GaqServerOptions, 'autoTypes' | 'dbClient'>,
+  options: Pick<GaqServerOptions, 'autoTypes' | 'dbAdapter'>,
   dbCollectionNameMap: Map<string, string>
 ): {
   gaqSchema: string;
@@ -303,7 +303,7 @@ export const getAutoSchemaAndResolvers = (
   const { gaqResolverDescriptions, gaqDataloaders } =
     getAutoResolversAndDataloaders(
       options.autoTypes,
-      options.dbClient,
+      options.dbAdapter,
       dbCollectionNameMap
     );
 
@@ -379,7 +379,7 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     | 'standardGraphqlTypes'
     | 'standardApolloResolvers'
     | 'schemaMapper'
-    | 'dbClient'
+    | 'dbAdapter'
   >
 ): Pick<ApolloServerOptions<TContext>, 'schema'> & {
   gaqDataloaders: Map<string, DataLoader<any, any, any>>;

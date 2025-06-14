@@ -2,16 +2,30 @@ import {
   generateResolvers,
   getResolversFromDescriptions,
 } from './resolver-builder';
-import { GaqResolverDescription } from '../interfaces/common.interfaces';
+import {
+  GaqFilterComparators,
+  GaqResolverDescription,
+  GaqRootQueryFilter,
+} from '../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
 import { getTestLogger } from '../test-utils/test-logger';
 import { setLogger } from '../logger';
 
+jest.mock('graphql-fields', () =>
+  jest.fn().mockReturnValue({
+    result: {
+      title: true,
+      id: true,
+    },
+    count: true,
+  })
+);
 describe('getResolversFromDescriptions', () => {
   let dbCollectionNameMap: Map<string, string>;
   let gaqDataloaders: Map<string, DataLoader<any, any, any>>;
   let BookauthorDataloader: jest.Mock;
   let BookreviewsDataloader: jest.Mock;
+  let getFromGaqFiltersSpy: jest.Mock;
   beforeEach(() => {
     setLogger(getTestLogger());
     dbCollectionNameMap = new Map([
@@ -41,10 +55,12 @@ describe('getResolversFromDescriptions', () => {
       },
     ];
 
+    const getFromGaqFiltersSpy = jest.fn().mockResolvedValue([]);
+
     const mockContext = {
       gaqDbClient: {
         getCollectionAdapter: jest.fn().mockImplementation((type) => ({
-          getFromGaqFilters: jest.fn().mockResolvedValue([]),
+          getFromGaqFilters: getFromGaqFiltersSpy,
           getByField: jest.fn().mockResolvedValue([]),
         })),
       },
@@ -63,13 +79,49 @@ describe('getResolversFromDescriptions', () => {
     const bookResolver = resolvers.Query.bookGaqQueryResult;
     const result = bookResolver(
       null,
-      { filters: {} } as any,
+      {
+        filters: {
+          and: [
+            {
+              key: 'title',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'The Great Gatsby',
+            },
+          ],
+          limit: 10,
+          offset: 0,
+          sort: [
+            {
+              key: 'title',
+              order: 1,
+            },
+          ],
+        },
+      },
       mockContext,
       null
     );
     expect(mockContext.gaqDbClient.getCollectionAdapter).toHaveBeenCalledWith(
       'books'
     );
+    expect(getFromGaqFiltersSpy.mock.calls[0][0]).toEqual({
+      and: [
+        {
+          key: 'title',
+          comparator: GaqFilterComparators.EQUAL,
+          value: 'The Great Gatsby',
+        },
+      ],
+    });
+    expect(getFromGaqFiltersSpy.mock.calls[0][1]).toEqual(['title', 'id']);
+    expect(getFromGaqFiltersSpy.mock.calls[0][2].limit).toEqual(10);
+    expect(getFromGaqFiltersSpy.mock.calls[0][2].offset).toEqual(0);
+    expect(getFromGaqFiltersSpy.mock.calls[0][2].sort).toEqual([
+      {
+        key: 'title',
+        order: 1,
+      },
+    ]);
     expect(result).resolves.toEqual({ count: 0, result: [] });
   });
 

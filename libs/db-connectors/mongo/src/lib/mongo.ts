@@ -1,4 +1,4 @@
-import { Db, MongoClient, ObjectId } from 'mongodb';
+import { Db, MongoClient, ObjectId, WithId, Document } from 'mongodb';
 import {
   GaqDbAdapter,
   GaqCollectionClient,
@@ -6,6 +6,21 @@ import {
   GaqDbQueryOptions,
 } from '@gaq';
 import { getMongoFilters } from './mongo-filters.adapter';
+
+const standardizeMongoResult = <T extends object>(
+  result: WithId<Document>[]
+): T[] => {
+  return result.map((item) => {
+    const standardizedItem = Object.entries(item).reduce(
+      (acc, [key, value]) => {
+        acc[key] = value instanceof ObjectId ? value.toString() : value;
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+    return standardizedItem as T;
+  });
+};
 
 const getCollectionAdapter = <T extends object>(
   db: Db,
@@ -15,10 +30,16 @@ const getCollectionAdapter = <T extends object>(
   return {
     getFromGaqFilters: async (
       filters: GaqRootQueryFilter<T>,
+      selectedFields: string[],
       opts: GaqDbQueryOptions
     ) => {
       const mongoFilters = getMongoFilters(filters);
+
+      opts.logger.debug(
+        `[${opts.traceId}] Mongo query filters: ${JSON.stringify(mongoFilters)}`
+      );
       const collectionQuery = collection.find(mongoFilters);
+
       if (opts.limit) {
         collectionQuery.limit(opts.limit);
       }
@@ -31,6 +52,11 @@ const getCollectionAdapter = <T extends object>(
         );
         collectionQuery.sort(sortObj);
       }
+      if (selectedFields.length > 0) {
+        collectionQuery.project(
+          Object.fromEntries(selectedFields.map((field) => [field, 1]))
+        );
+      }
       opts.logger.debug(
         `[${opts.traceId}] Querying mongo collection ${collectionName}`
       );
@@ -38,10 +64,7 @@ const getCollectionAdapter = <T extends object>(
       opts.logger.debug(
         `[${opts.traceId}] Mongo query succedeed ${result.length} items`
       );
-      return result.map((item) => {
-        const { _id, ...rest } = item;
-        return { _id: _id.toString(), ...rest } as T;
-      });
+      return standardizeMongoResult<T>(result);
     },
     getValuesInField: async (payload, opts: GaqDbQueryOptions) => {
       const mongoQuery = {
@@ -57,23 +80,8 @@ const getCollectionAdapter = <T extends object>(
       opts.logger.debug(
         `[${opts.traceId}] Querying mongo collection ${collectionName}`
       );
-      opts.logger.debug(
-        `[${opts.traceId}] Mongo query: ${JSON.stringify(mongoQuery)}`
-      );
       const result = await collection.find(mongoQuery).toArray();
-      // opts.logger.debug(
-      //   `[${opts.traceId}] Mongo query succedeed ${result.length} items`
-      // );
-      return result.map((item) => {
-        const standardizedItem = Object.entries(item).reduce(
-          (acc, [key, value]) => {
-            acc[key] = value instanceof ObjectId ? value.toString() : value;
-            return acc;
-          },
-          {} as Record<string, any>
-        );
-        return standardizedItem as T;
-      });
+      return standardizeMongoResult(result);
     },
   };
 };

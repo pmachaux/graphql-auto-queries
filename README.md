@@ -17,7 +17,6 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 ## Incoming features
 
 - Federation support as subgraph
-- Query only the requested fields at db level
 - PostGres connector
 
 ## Usage Example

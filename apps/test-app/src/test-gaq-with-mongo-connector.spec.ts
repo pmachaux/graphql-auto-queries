@@ -24,6 +24,7 @@ describe('Testing Gaq With Mongo connector', () => {
             _id: ID
             title: String
             year: Int
+            released: DateTime
             comments: [Comment] @fieldResolver(parentKey: "_id", fieldKey: "movie_id")
           }
         
@@ -95,5 +96,143 @@ describe('Testing Gaq With Mongo connector', () => {
         },
       ],
     });
+    expect(response.body.data?.movieGaqQueryResult.count).toEqual(1);
+  });
+  it('should be able to query with sorting', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                released
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'released',
+              comparator: GaqFilterComparators.GREATER,
+              value: new Date('2016-03-04'),
+            },
+          ],
+          sort: [{ key: 'released', order: 1 }],
+        },
+      },
+    };
+    const responseWithAscendingSort = await request(url)
+      .post('/')
+      .send(queryData);
+    expect(responseWithAscendingSort.body.errors).toBeUndefined();
+    expect(
+      responseWithAscendingSort.body.data?.movieGaqQueryResult.result[0]
+    ).toEqual({
+      _id: '573a13d6f29313caabda10e6',
+      released: '2016-03-04T00:00:00.000Z',
+    });
+    expect(
+      responseWithAscendingSort.body.data?.movieGaqQueryResult.result[1]
+    ).toEqual({
+      _id: '573a13f8f29313caabde8d7a',
+      released: '2016-03-23T00:00:00.000Z',
+    });
+
+    const responseWithDescendingSort = await request(url)
+      .post('/')
+      .send({
+        ...queryData,
+        variables: {
+          ...queryData.variables,
+          filters: {
+            ...queryData.variables.filters,
+            sort: [{ key: 'released', order: -1 }],
+          },
+        },
+      });
+
+    expect(
+      responseWithDescendingSort.body.data?.movieGaqQueryResult.result[0]
+    ).toEqual({
+      _id: '573a13f8f29313caabde8d7a',
+      released: '2016-03-23T00:00:00.000Z',
+    });
+    expect(
+      responseWithDescendingSort.body.data?.movieGaqQueryResult.result[1]
+    ).toEqual({
+      _id: '573a13d6f29313caabda10e6',
+      released: '2016-03-04T00:00:00.000Z',
+    });
+  });
+  it('should be able to query with limit', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+              }
+              count
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'released',
+              comparator: GaqFilterComparators.GREATER,
+              value: new Date('2014-03-04'),
+            },
+          ],
+          limit: 2,
+          sort: [{ key: 'released', order: 1 }],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.movieGaqQueryResult.result[0]).toEqual({
+      _id: '573a13e8f29313caabdc9c3a',
+    });
+    expect(response.body.data?.movieGaqQueryResult.result[1]).toEqual({
+      _id: '573a13d8f29313caabda53e0',
+    });
+    expect(response.body.data?.movieGaqQueryResult.count).toEqual(2);
+  });
+  it('should be able to query with offset', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+              }
+              count
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'released',
+              comparator: GaqFilterComparators.GREATER,
+              value: new Date('2014-03-04'),
+            },
+          ],
+          limit: 2,
+          sort: [{ key: 'released', order: 1 }],
+          offset: 1,
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.movieGaqQueryResult.result[0]).toEqual({
+      _id: '573a13def29313caabdb6575',
+    });
+    expect(response.body.data?.movieGaqQueryResult.result[1]).toEqual({
+      _id: '573a13d8f29313caabda53e0',
+    });
+    expect(response.body.data?.movieGaqQueryResult.count).toEqual(2);
   });
 });

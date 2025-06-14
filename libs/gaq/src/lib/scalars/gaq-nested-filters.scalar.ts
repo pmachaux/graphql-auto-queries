@@ -10,6 +10,8 @@ import {
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
 import { parseAstBaseValues } from './scalar.utils';
+import { validateDateTime } from './validator';
+import { parseDateTime } from './formatter';
 
 const validateLimit = (limit: any, ast?: ASTNode) => {
   if (limit > 0 && Number.isInteger(limit)) {
@@ -168,6 +170,10 @@ export const validate = (
         validate(f as GaqAndOrNorFilter<object>);
       });
     }
+  }
+
+  if (validateDateTime(o8FilterQuery.value)) {
+    return { ...o8FilterQuery, value: parseDateTime(o8FilterQuery.value) };
   }
 
   return filterValue;

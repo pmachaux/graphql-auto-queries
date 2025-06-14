@@ -125,8 +125,9 @@ export type GaqDbQueryOptions = {
 export interface GaqCollectionClient<T extends object> {
   getFromGaqFilters(
     filters: GaqRootQueryFilter<T>,
+    selectedFields: string[],
     opts: GaqDbQueryOptions
-  ): Promise<Array<T>>;
+  ): Promise<T[]>;
   getValuesInField(
     payload: { field: string; values: any[] },
     opts: GaqDbQueryOptions

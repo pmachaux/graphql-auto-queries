@@ -10,6 +10,7 @@ import { getLogger } from '../logger';
 import { GaqErrorCodes } from '../interfaces/gaq-errors.interface';
 import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
 import { IResolvers } from '@graphql-tools/utils';
+import graphqlFields = require('graphql-fields');
 
 const getStandardResolver = (
   linkedType: string,
@@ -22,6 +23,21 @@ const getStandardResolver = (
     contextValue: GaqContext,
     info: any
   ) => {
+    const requestedFields = graphqlFields(info) as {
+      result?: Record<string, any>;
+      count?: any;
+    };
+
+    if (!requestedFields.result && !requestedFields.count) {
+      throw new Error(GaqErrorCodes.INVALID_REQUEST);
+    }
+    const selectedFields = Object.keys(requestedFields.result ?? {});
+
+    logger.debug(
+      `[${
+        contextValue.traceId
+      }] Selected fields for ${linkedType}: ${selectedFields.join(', ')}`
+    );
     logger.debug(
       `[${contextValue.traceId}] Getting standard resolver for ${linkedType}`
     );
@@ -38,13 +54,17 @@ const getStandardResolver = (
     );
 
     return collectionClient
-      .getFromGaqFilters(args.filters, {
-        logger,
-        sort: args.filters.sort,
-        limit: args.filters.limit,
-        offset: args.filters.offset,
-        traceId: contextValue.traceId,
-      })
+      .getFromGaqFilters(
+        omit(args.filters, 'sort', 'limit', 'offset'),
+        selectedFields,
+        {
+          logger,
+          sort: args.filters.sort,
+          limit: args.filters.limit,
+          offset: args.filters.offset,
+          traceId: contextValue.traceId,
+        }
+      )
       .then((data) => {
         logger.debug(
           `[${contextValue.traceId}] Data for ${linkedType} fetched, returning ${data.length} items`

@@ -85,8 +85,15 @@ describe('Testing Gaq With Mongo connector', () => {
 
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data?.movieGaqQueryResult.result[0]).toEqual({
-      title: 'The Great Gatsby',
-      authorId: '1',
+      _id: '573a1391f29313caabcd70b4',
+      title: 'The Four Horsemen of the Apocalypse',
+      year: 1921,
+      comments: [
+        {
+          name: 'Olenna Tyrell',
+          date: '2007-06-27T20:27:44.000Z',
+        },
+      ],
     });
   });
 });

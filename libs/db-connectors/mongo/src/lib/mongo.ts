@@ -61,12 +61,18 @@ const getCollectionAdapter = <T extends object>(
         `[${opts.traceId}] Mongo query: ${JSON.stringify(mongoQuery)}`
       );
       const result = await collection.find(mongoQuery).toArray();
-      opts.logger.debug(
-        `[${opts.traceId}] Mongo query succedeed ${result.length} items`
-      );
+      // opts.logger.debug(
+      //   `[${opts.traceId}] Mongo query succedeed ${result.length} items`
+      // );
       return result.map((item) => {
-        const { _id, ...rest } = item;
-        return { _id: _id.toString(), ...rest } as T;
+        const standardizedItem = Object.entries(item).reduce(
+          (acc, [key, value]) => {
+            acc[key] = value instanceof ObjectId ? value.toString() : value;
+            return acc;
+          },
+          {} as Record<string, any>
+        );
+        return standardizedItem as T;
       });
     },
   };

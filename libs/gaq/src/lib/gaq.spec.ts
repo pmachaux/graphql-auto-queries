@@ -14,8 +14,10 @@ describe('gaq', () => {
     let server: GaqServer;
     let url: string;
     let bookSpy: jest.SpyInstance;
+    let bookCountSpy: jest.SpyInstance;
     beforeAll(async () => {
       bookSpy = jest.fn();
+      bookCountSpy = jest.fn();
       server = getGraphQLAutoQueriesServer({
         logger: getTestLogger(),
         autoTypes: `
@@ -42,6 +44,7 @@ describe('gaq', () => {
         `,
         dbAdapter: getMockedDatasource({
           bookSpy: bookSpy as any,
+          bookCountSpy: bookCountSpy as any,
         }),
       });
       ({ url } = await server.startGraphQLAutoQueriesServer({
@@ -50,6 +53,7 @@ describe('gaq', () => {
     });
     beforeEach(() => {
       bookSpy.mockClear();
+      bookCountSpy.mockClear();
     });
 
     afterAll(async () => {
@@ -237,6 +241,35 @@ describe('gaq', () => {
       expect(bookSpy.mock.calls[0][2].sort).toEqual([
         { key: 'title', order: 1 },
       ]);
+    });
+    it('should call the count method only if no fields are selected', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              count
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [
+              {
+                key: 'title',
+                comparator: GaqFilterComparators.EQUAL,
+                value: 'The Great Gatsby',
+              },
+            ],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+      const response = await request(url).post('/').send(queryData);
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data?.bookGaqQueryResult.count).toEqual(1);
+      expect(bookCountSpy).toHaveBeenCalledTimes(1);
+      expect(bookSpy).not.toHaveBeenCalled();
     });
   });
   describe('solving n+1 problem', () => {

@@ -123,6 +123,7 @@ export type GaqDbQueryOptions = {
 };
 
 export interface GaqCollectionClient<T extends object> {
+  count(filters: GaqRootQueryFilter<T>): Promise<number>;
   getFromGaqFilters(
     filters: GaqRootQueryFilter<T>,
     selectedFields: string[],

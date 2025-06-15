@@ -28,6 +28,10 @@ const getCollectionAdapter = <T extends object>(
 ): GaqCollectionClient<T> => {
   const collection = db.collection(collectionName);
   return {
+    count: async (filters: GaqRootQueryFilter<T>) => {
+      const mongoFilters = getMongoFilters(filters);
+      return collection.countDocuments(mongoFilters);
+    },
     getFromGaqFilters: async (
       filters: GaqRootQueryFilter<T>,
       selectedFields: string[],
@@ -35,9 +39,6 @@ const getCollectionAdapter = <T extends object>(
     ) => {
       const mongoFilters = getMongoFilters(filters);
 
-      opts.logger.debug(
-        `[${opts.traceId}] Mongo query filters: ${JSON.stringify(mongoFilters)}`
-      );
       const collectionQuery = collection.find(mongoFilters);
 
       if (opts.limit) {
@@ -57,6 +58,7 @@ const getCollectionAdapter = <T extends object>(
           Object.fromEntries(selectedFields.map((field) => [field, 1]))
         );
       }
+
       opts.logger.debug(
         `[${opts.traceId}] Querying mongo collection ${collectionName}`
       );

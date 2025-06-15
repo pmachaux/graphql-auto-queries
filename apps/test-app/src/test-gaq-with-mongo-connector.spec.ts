@@ -98,6 +98,30 @@ describe('Testing Gaq With Mongo connector', () => {
     });
     expect(response.body.data?.movieGaqQueryResult.count).toEqual(1);
   });
+  it('should be able to query with count only', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
+            movieGaqQueryResult(filters: $filters) {
+              count
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'title',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'The Four Horsemen of the Apocalypse',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.movieGaqQueryResult.count).toEqual(1);
+  });
   it('should be able to query with sorting', async () => {
     const queryData = {
       query: `query($filters: GaqRootFiltersInput) {

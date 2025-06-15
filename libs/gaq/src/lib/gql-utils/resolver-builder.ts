@@ -52,6 +52,11 @@ const getStandardResolver = (
     logger.debug(
       `[${contextValue.traceId}] Getting data from collection ${dbCollectionName}`
     );
+    if (selectedFields.length === 0) {
+      return collectionClient.count(args.filters).then((count) => ({
+        count,
+      }));
+    }
 
     return collectionClient
       .getFromGaqFilters(

@@ -28,11 +28,28 @@ export const getMockedDatasource = (spies?: {
   bookSpy?: Function;
   authorSpy?: Function;
   reviewSpy?: Function;
+  bookCountSpy?: Function;
 }): GaqDbAdapter => {
   return {
     getCollectionAdapter: (collectionName: string) => {
       if (collectionName === 'books') {
         return {
+          count: async (
+            filters: GaqRootQueryFilter<{ title: string; authorId: string }>
+          ) => {
+            spies?.bookCountSpy?.(filters);
+            return books.filter((book) => {
+              return (
+                book.title ===
+                (
+                  filters.and[0] as GaqFilterQuery<
+                    { title: string; authorId: string },
+                    'title'
+                  >
+                ).value
+              );
+            }).length;
+          },
           getValuesInField: async () => [],
           getFromGaqFilters: async (
             filters: GaqRootQueryFilter<{ title: string; authorId: string }>,

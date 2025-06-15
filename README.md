@@ -10,14 +10,15 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 - **Database-agnostic**: plug in your own database connector
 - **Advanced filtering and sorting** out of the box
 - **Customizable logging**
+- **Traceable logs**
 - **Extensible with Apollo Server options**
 - **Route guards, authorization, authentication**
 - **N+1 problem handled automatically with dataloaders**
+- **Optimized DB queries, automatically only request necessary fields and nothing more to increase performances and reduce read costs**
 
 ## Incoming features
 
 - Optimize count query in mongo if no selected fields
-- Dataloaders created at each request and passing the traceId and requested fields for the field
 - Federation support as subgraph
 - PostGres connector
 

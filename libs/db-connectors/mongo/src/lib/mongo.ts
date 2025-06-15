@@ -66,7 +66,11 @@ const getCollectionAdapter = <T extends object>(
       );
       return standardizeMongoResult<T>(result);
     },
-    getValuesInField: async (payload, opts: GaqDbQueryOptions) => {
+    getValuesInField: async (
+      payload,
+      selectedFields: string[],
+      opts: GaqDbQueryOptions
+    ) => {
       const mongoQuery = {
         [payload.field]: {
           $in: payload.values.flatMap((v) => {
@@ -80,7 +84,13 @@ const getCollectionAdapter = <T extends object>(
       opts.logger.debug(
         `[${opts.traceId}] Querying mongo collection ${collectionName}`
       );
-      const result = await collection.find(mongoQuery).toArray();
+      const fingQuery = collection.find(mongoQuery);
+      if (selectedFields.length > 0) {
+        fingQuery.project(
+          Object.fromEntries(selectedFields.map((field) => [field, 1]))
+        );
+      }
+      const result = await fingQuery.toArray();
       return standardizeMongoResult(result);
     },
   };

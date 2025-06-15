@@ -6,7 +6,12 @@ import {
 } from '../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
 import { getLogger } from '../logger';
-import { DocumentNode, FieldNode, Kind } from 'graphql';
+import {
+  DocumentNode,
+  FieldNode,
+  Kind,
+  OperationDefinitionNode,
+} from 'graphql';
 
 const matchingFnForArrays = <T extends object = object>(
   fieldsResolverOption: GaqFieldResolverDescription,
@@ -111,9 +116,45 @@ export const createDataLoaderFactory = ({
 }) => {
   const batchFn = batchLoadFn({ requestedFields, traceId });
   return new DataLoader<any, any, any>(
-    batchFn(fieldResolver, dbCollectionNameMap, gaqDbClient, getLogger()),
-    { cache: false }
+    batchFn(fieldResolver, dbCollectionNameMap, gaqDbClient, getLogger())
   );
+};
+
+const findRequestedFieldsForDataloaderFromQueryDefinition = (
+  queryDefinition: OperationDefinitionNode,
+  resolverDescription: GaqResolverDescription,
+  fieldResolver: GaqFieldResolverDescription
+): string[] => {
+  const requestedFields: string[] = [fieldResolver.fieldKey];
+  const fieldSelection = queryDefinition.selectionSet.selections.find(
+    (selection) =>
+      selection.kind === Kind.FIELD &&
+      selection.name.value === resolverDescription.queryName
+  ) as FieldNode | undefined;
+
+  if (fieldSelection?.selectionSet) {
+    const resultSelection = fieldSelection.selectionSet.selections.find(
+      (selection) =>
+        selection.kind === Kind.FIELD && selection.name.value === 'result'
+    ) as FieldNode | undefined;
+
+    if (resultSelection?.selectionSet) {
+      const linkedTypeSelection = resultSelection.selectionSet.selections.find(
+        (selection) =>
+          selection.kind === Kind.FIELD &&
+          selection.name.value === fieldResolver.fieldName
+      ) as FieldNode | undefined;
+
+      if (linkedTypeSelection?.selectionSet) {
+        linkedTypeSelection.selectionSet.selections.forEach((selection) => {
+          if (selection.kind === Kind.FIELD) {
+            requestedFields.push(selection.name.value);
+          }
+        });
+      }
+    }
+  }
+  return requestedFields;
 };
 
 export const analyzeQueryForDataloaders = (
@@ -148,7 +189,11 @@ export const analyzeQueryForDataloaders = (
 
   resolverDescription.fieldResolvers.forEach((fieldResolver) => {
     const dataloader = createDataLoaderFactory({
-      requestedFields: [],
+      requestedFields: findRequestedFieldsForDataloaderFromQueryDefinition(
+        queryDefinition,
+        resolverDescription,
+        fieldResolver
+      ),
       traceId: opts.traceId,
       fieldResolver,
       dbCollectionNameMap: opts.dbCollectionNameMap,

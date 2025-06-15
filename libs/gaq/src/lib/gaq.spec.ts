@@ -13,7 +13,9 @@ describe('gaq', () => {
   describe('basic features', () => {
     let server: GaqServer;
     let url: string;
+    let bookSpy: jest.SpyInstance;
     beforeAll(async () => {
+      bookSpy = jest.fn();
       server = getGraphQLAutoQueriesServer({
         logger: getTestLogger(),
         autoTypes: `
@@ -38,11 +40,16 @@ describe('gaq', () => {
             book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
           }
         `,
-        dbAdapter: getMockedDatasource(),
+        dbAdapter: getMockedDatasource({
+          bookSpy: bookSpy as any,
+        }),
       });
       ({ url } = await server.startGraphQLAutoQueriesServer({
         listen: { port: 0 },
       }));
+    });
+    beforeEach(() => {
+      bookSpy.mockClear();
     });
 
     afterAll(async () => {
@@ -185,6 +192,52 @@ describe('gaq', () => {
         ],
       });
     });
+    it('should request to the db provider only the selected fields in the query and nothing more', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                title
+                authorId
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [
+              {
+                key: 'title',
+                comparator: GaqFilterComparators.EQUAL,
+                value: 'The Great Gatsby',
+              },
+            ],
+            limit: 1,
+            offset: 0,
+            sort: [{ key: 'title', order: 1 }],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+      await request(url).post('/').send(queryData);
+
+      expect(bookSpy.mock.calls[0][0]).toEqual({
+        and: [
+          {
+            key: 'title',
+            comparator: GaqFilterComparators.EQUAL,
+            value: 'The Great Gatsby',
+          },
+        ],
+      });
+      expect(bookSpy.mock.calls[0][1]).toEqual(['title', 'authorId']);
+      expect(bookSpy.mock.calls[0][2].limit).toEqual(1);
+      expect(bookSpy.mock.calls[0][2].offset).toEqual(0);
+      expect(bookSpy.mock.calls[0][2].sort).toEqual([
+        { key: 'title', order: 1 },
+      ]);
+    });
   });
   describe('solving n+1 problem', () => {
     let server: GaqServer;
@@ -229,6 +282,11 @@ describe('gaq', () => {
       ({ url } = await server.startGraphQLAutoQueriesServer({
         listen: { port: 0 },
       }));
+    });
+    beforeEach(() => {
+      bookSpy.mockClear();
+      authorSpy.mockClear();
+      reviewSpy.mockClear();
     });
 
     afterAll(async () => {
@@ -309,6 +367,38 @@ describe('gaq', () => {
       expect(bookSpy).toHaveBeenCalledTimes(2);
       expect(authorSpy).toHaveBeenCalledTimes(2);
       expect(reviewSpy).toHaveBeenCalledTimes(2);
+    });
+    it('should call the the field resolver in the dataloader with only the selected fields and the field key even if not requested', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                id
+                title
+                authorId
+                author {
+                  name
+                }
+                reviews {
+                  id
+                  content
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+
+      await request(url).post('/').send(queryData);
+      expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
+      expect(reviewSpy.mock.calls[0][1]).toEqual(['bookId', 'id', 'content']);
     });
   });
 

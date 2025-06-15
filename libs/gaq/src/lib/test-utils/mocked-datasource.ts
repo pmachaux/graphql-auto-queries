@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import {
   GaqDbAdapter,
+  GaqDbQueryOptions,
   GaqFilterQuery,
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
@@ -34,9 +35,11 @@ export const getMockedDatasource = (spies?: {
         return {
           getValuesInField: async () => [],
           getFromGaqFilters: async (
-            filters: GaqRootQueryFilter<{ title: string; authorId: string }>
+            filters: GaqRootQueryFilter<{ title: string; authorId: string }>,
+            selectedFields: string[],
+            opts: GaqDbQueryOptions
           ) => {
-            spies?.bookSpy?.(filters);
+            spies?.bookSpy?.(filters, selectedFields, opts);
             if (filters.and.length === 0) {
               return books;
             }
@@ -56,29 +59,29 @@ export const getMockedDatasource = (spies?: {
       }
       if (collectionName === 'authors') {
         return {
-          getValuesInField: async ({
-            field,
-            values,
-          }: {
-            field: string;
-            values: string[];
-          }) => {
-            spies?.authorSpy?.({ field, values });
-            return authors.filter((a) => values.includes(a[field]));
+          getValuesInField: async (
+            payload: { field: string; values: any[] },
+            selectedFields: string[],
+            opts: GaqDbQueryOptions
+          ) => {
+            spies?.authorSpy?.(payload, selectedFields, opts);
+            return authors.filter((a) =>
+              payload.values.includes(a[payload.field])
+            );
           },
         };
       }
       if (collectionName === 'reviews') {
         return {
-          getValuesInField: async ({
-            field,
-            values,
-          }: {
-            field: string;
-            values: string[];
-          }) => {
-            spies?.reviewSpy?.({ field, values });
-            return reviews.filter((a) => values.includes(a[field]));
+          getValuesInField: async (
+            payload: { field: string; values: any[] },
+            selectedFields: string[],
+            opts: GaqDbQueryOptions
+          ) => {
+            spies?.reviewSpy?.(payload, selectedFields, opts);
+            return reviews.filter((a) =>
+              payload.values.includes(a[payload.field])
+            );
           },
         };
       }

@@ -130,6 +130,7 @@ export interface GaqCollectionClient<T extends object> {
   ): Promise<T[]>;
   getValuesInField(
     payload: { field: string; values: any[] },
+    selectedFields: string[],
     opts: GaqDbQueryOptions
   ): Promise<T[]>;
 }

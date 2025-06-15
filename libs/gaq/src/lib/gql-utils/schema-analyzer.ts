@@ -28,7 +28,6 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
 import { mapSchema } from '@graphql-tools/utils';
 import DataLoader = require('dataloader');
-import { getNewDataLoaderFromFieldResolver } from './dataloader';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -242,12 +241,9 @@ const getFieldResolversFromProperties = (
 };
 
 export const getAutoResolversAndDataloaders = (
-  autoTypes: string,
-  gaqDbClient: GaqDbAdapter,
-  dbCollectionNameMap: Map<string, string>
+  autoTypes: string
 ): {
   gaqResolverDescriptions: GaqResolverDescription[];
-  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
 } => {
   const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
 
@@ -271,48 +267,28 @@ export const getAutoResolversAndDataloaders = (
     } satisfies GaqResolverDescription;
   });
 
-  const gaqDataloaders = new Map<string, DataLoader<any, any, any>>();
-  gaqResolverDescriptions.forEach((resolverDescription) => {
-    resolverDescription.fieldResolvers.forEach((fieldResolver) => {
-      const dataloader = getNewDataLoaderFromFieldResolver(
-        fieldResolver,
-        dbCollectionNameMap,
-        gaqDbClient
-      );
-      const dataloaderName = `${resolverDescription.linkedType}${fieldResolver.fieldName}Dataloader`;
-      gaqDataloaders.set(dataloaderName, dataloader);
-    });
-  });
-
   return {
     gaqResolverDescriptions,
-    gaqDataloaders,
   };
 };
 
 export const getAutoSchemaAndResolvers = (
-  options: Pick<GaqServerOptions, 'autoTypes' | 'dbAdapter'>,
-  dbCollectionNameMap: Map<string, string>
+  options: Pick<GaqServerOptions, 'autoTypes' | 'dbAdapter'>
 ): {
   gaqSchema: string;
   gaqResolverDescriptions: GaqResolverDescription[];
-  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
 } => {
   const logger = getLogger();
   logger.debug('Building auto resolvers');
-  const { gaqResolverDescriptions, gaqDataloaders } =
-    getAutoResolversAndDataloaders(
-      options.autoTypes,
-      options.dbAdapter,
-      dbCollectionNameMap
-    );
+  const { gaqResolverDescriptions } = getAutoResolversAndDataloaders(
+    options.autoTypes
+  );
 
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
     return {
       gaqSchema: options.autoTypes,
       gaqResolverDescriptions: [],
-      gaqDataloaders: new Map(),
     };
   }
   logger.debug(
@@ -341,7 +317,7 @@ export const getAutoSchemaAndResolvers = (
   }`;
 
   logger.debug('Auto schema built');
-  return { gaqSchema, gaqResolverDescriptions, gaqDataloaders };
+  return { gaqSchema, gaqResolverDescriptions };
 };
 
 export const setDbCollectionNameMap = (
@@ -382,12 +358,13 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
     | 'dbAdapter'
   >
 ): Pick<ApolloServerOptions<TContext>, 'schema'> & {
-  gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+  gaqResolverDescriptions: GaqResolverDescription[];
+  dbCollectionNameMap: Map<string, string>;
 } => {
   const logger = getLogger();
   const dbCollectionNameMap = new Map<string, string>();
-  const { gaqSchema, gaqResolverDescriptions, gaqDataloaders } =
-    getAutoSchemaAndResolvers(options, dbCollectionNameMap);
+  const { gaqSchema, gaqResolverDescriptions } =
+    getAutoSchemaAndResolvers(options);
   const autoTypesDefs = gql`
     ${gaqSchema}
   `;
@@ -420,6 +397,7 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
 
   return {
     schema,
-    gaqDataloaders,
+    gaqResolverDescriptions,
+    dbCollectionNameMap,
   };
 };

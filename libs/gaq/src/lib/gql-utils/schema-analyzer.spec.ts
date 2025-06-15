@@ -124,10 +124,8 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        new Map<string, string>()
-      );
+      const { gaqSchema, gaqResolverDescriptions } =
+        getAutoSchemaAndResolvers(options);
 
       expect(gaqResolverDescriptions).toEqual([
         {
@@ -170,10 +168,7 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        new Map<string, string>()
-      );
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
         resultType: 'BookGaqResult',
@@ -216,11 +211,7 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const dbCollectionNameMap = new Map<string, string>();
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        dbCollectionNameMap
-      );
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
 
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
@@ -264,10 +255,8 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        new Map<string, string>()
-      );
+      const { gaqSchema, gaqResolverDescriptions } =
+        getAutoSchemaAndResolvers(options);
 
       expect(gaqResolverDescriptions).toEqual([]);
       expect(gaqSchema).toBe('');
@@ -287,9 +276,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      expect(() =>
-        getAutoSchemaAndResolvers(options, new Map<string, string>())
-      ).toThrow('@dbCollection directive is required on type Book');
+      expect(() => getAutoSchemaAndResolvers(options)).toThrow(
+        '@dbCollection directive is required on type Book'
+      );
     });
 
     it('should throw error when @dbCollection directive is missing collectionName argument', () => {
@@ -305,9 +294,7 @@ describe('schema-analyzer', () => {
         },
       };
 
-      expect(() =>
-        getAutoSchemaAndResolvers(options, new Map<string, string>())
-      ).toThrow(
+      expect(() => getAutoSchemaAndResolvers(options)).toThrow(
         'collectionName argument is required on directive @dbCollection on type Book'
       );
     });
@@ -329,9 +316,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      expect(() =>
-        getAutoSchemaAndResolvers(options, new Map<string, string>())
-      ).toThrow('parentKey argument is required on directive @fieldResolver');
+      expect(() => getAutoSchemaAndResolvers(options)).toThrow(
+        'parentKey argument is required on directive @fieldResolver'
+      );
     });
 
     it('should handle non-nullable fields correctly', () => {
@@ -357,11 +344,7 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const dbCollectionNameMap = new Map<string, string>();
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        dbCollectionNameMap
-      );
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
 
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
@@ -408,11 +391,8 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const dbCollectionNameMap = new Map<string, string>();
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        dbCollectionNameMap
-      );
+
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
 
       expect(gaqResolverDescriptions).toHaveLength(2);
       expect(gaqResolverDescriptions[0].fieldResolvers).toHaveLength(1);

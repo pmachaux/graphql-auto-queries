@@ -16,6 +16,8 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Incoming features
 
+- Optimize count query in mongo if no selected fields
+- Dataloaders created at each request and passing the traceId and requested fields for the field
 - Federation support as subgraph
 - PostGres connector
 

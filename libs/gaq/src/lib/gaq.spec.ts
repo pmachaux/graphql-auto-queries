@@ -82,6 +82,34 @@ describe('gaq', () => {
         authorId: '1',
       });
     });
+    it('should return books when querying bookGaqQueryResult even if the filters are passed inline and not in the variables', async () => {
+      const queryData = {
+        query: `query {
+            bookGaqQueryResult(filters: {
+              and: [
+                {
+                  key: "title",
+                  comparator: "==",
+                  value: "The Great Gatsby",
+                },
+              ],
+            }) {
+              result {
+                title
+                authorId
+              }
+              count
+            }
+          }`,
+      };
+      const response = await request(url).post('/').send(queryData);
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
+        title: 'The Great Gatsby',
+        authorId: '1',
+      });
+    });
     it('should be able to retun the author name when querying bookGaqQueryResult', async () => {
       const queryData = {
         query: `query($filters: GaqRootFiltersInput) {

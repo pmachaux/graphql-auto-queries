@@ -5,6 +5,7 @@ import {
 } from '@apollo/server/standalone';
 import {
   GaqContext,
+  GaqResolverDescription,
   GaqServer,
   GaqServerOptions,
 } from './interfaces/common.interfaces';
@@ -13,9 +14,9 @@ import { getMergedSchemaAndResolvers } from './gql-utils/schema-analyzer';
 import { ListenOptions } from 'net';
 import { WithRequired } from './interfaces/ts-wizard.interface';
 import { getLogger, setLogger } from './logger';
-import { GraphQLSchema } from 'graphql';
-import DataLoader = require('dataloader');
+import { GraphQLSchema, parse } from 'graphql';
 import { randomUUID } from 'crypto';
+import { analyzeQueryForDataloaders } from './gql-utils/dataloader';
 
 export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
   config: GaqServerOptions
@@ -25,9 +26,11 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
 
   logger.info('Creating GraphQL Auto Queries Server...');
   let schema: GraphQLSchema;
-  let gaqDataloaders: Map<string, DataLoader<any, any, any>>;
+  let gaqResolverDescriptions: GaqResolverDescription[];
+  let dbCollectionNameMap: Map<string, string>;
   try {
-    ({ schema, gaqDataloaders } = getMergedSchemaAndResolvers(config));
+    ({ schema, gaqResolverDescriptions, dbCollectionNameMap } =
+      getMergedSchemaAndResolvers(config));
   } catch (error) {
     logger.error('Error creating auto schema and resolvers');
     logger.error(error);
@@ -57,11 +60,20 @@ export function getGraphQLAutoQueriesServer<TContext extends GaqContext>(
 
       const context = async ({ req, res }): Promise<TContext> => {
         const apolloContext = await options?.context?.({ req, res });
+        const ast = req.body.query ? parse(req.body.query) : null;
+        const traceId = randomUUID();
         return {
           ...apolloContext,
           gaqDbClient: config.dbAdapter,
-          gaqDataloaders,
-          traceId: randomUUID(),
+          gaqDataloaders: ast
+            ? analyzeQueryForDataloaders(ast, {
+                traceId,
+                gaqResolverDescriptions,
+                dbCollectionNameMap,
+                gaqDbClient: config.dbAdapter,
+              }).gaqDataloaders
+            : new Map(),
+          traceId,
         } as unknown as TContext;
       };
       const optionsWithGaqContext = {

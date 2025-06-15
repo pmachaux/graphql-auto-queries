@@ -18,8 +18,8 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Incoming features
 
-- Optimize count query in mongo if no selected fields
 - Federation support as subgraph
+- Add option for default limit and max limit in queries
 - PostGres connector
 
 ## Usage Example

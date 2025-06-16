@@ -61,6 +61,7 @@ export type GaqServer<TContext extends GaqContext = GaqContext> =
 export type GaqFieldResolverArguments = {
   parentKey: string;
   fieldKey: string;
+  limit: number | null;
 };
 export type GaqFieldResolverDescription = Prettify<
   GaqFieldResolverArguments & {
@@ -77,6 +78,8 @@ export interface GaqResolverDescription {
   linkedType: string;
   fieldResolvers: GaqFieldResolverDescription[];
   dbCollectionName: string;
+  defaultLimit: number | null;
+  maxLimit: number | null;
 }
 
 export interface DetailedGaqFieldDefinition {
@@ -89,6 +92,8 @@ export interface DetailedGaqTypeDefinition {
   name: string;
   properties: Record<string, DetailedGaqFieldDefinition>;
   dbCollectionName: string;
+  defaultLimit: number | null;
+  maxLimit: number | null;
 }
 
 export interface GaqResult<T extends object> {

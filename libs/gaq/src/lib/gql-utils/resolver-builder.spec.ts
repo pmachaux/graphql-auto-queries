@@ -52,6 +52,8 @@ describe('getResolversFromDescriptions', () => {
         linkedType: 'Book',
         dbCollectionName: 'books',
         fieldResolvers: [],
+        defaultLimit: null,
+        maxLimit: null,
       },
     ];
 
@@ -133,6 +135,8 @@ describe('getResolversFromDescriptions', () => {
         linkedType: 'User',
         dbCollectionName: 'users',
         fieldResolvers: [],
+        defaultLimit: null,
+        maxLimit: null,
       },
     ];
 
@@ -166,6 +170,8 @@ describe('getResolversFromDescriptions', () => {
         linkedType: 'User',
         dbCollectionName: 'users',
         fieldResolvers: [],
+        defaultLimit: null,
+        maxLimit: null,
       },
     ];
 
@@ -202,6 +208,8 @@ describe('getResolversFromDescriptions', () => {
           resultType: 'BookGaqResult',
           linkedType: 'Book',
           dbCollectionName: 'books',
+          defaultLimit: null,
+          maxLimit: null,
           fieldResolvers: [
             {
               parentKey: 'authorId',
@@ -210,6 +218,7 @@ describe('getResolversFromDescriptions', () => {
               fieldType: 'Author',
               fieldName: 'author',
               dataloaderName: 'BookauthorDataloader',
+              limit: null,
             },
           ],
         },
@@ -244,6 +253,8 @@ describe('getResolversFromDescriptions', () => {
           resultType: 'BookGaqResult',
           linkedType: 'Book',
           dbCollectionName: 'books',
+          defaultLimit: null,
+          maxLimit: null,
           fieldResolvers: [],
         },
       ];
@@ -266,6 +277,8 @@ describe('getResolversFromDescriptions', () => {
           resultType: 'BookGaqResult',
           linkedType: 'Book',
           dbCollectionName: 'books',
+          defaultLimit: null,
+          maxLimit: null,
           fieldResolvers: [
             {
               parentKey: 'authorId',
@@ -274,6 +287,7 @@ describe('getResolversFromDescriptions', () => {
               fieldType: 'Author',
               fieldName: 'author',
               dataloaderName: 'BookauthorDataloader',
+              limit: null,
             },
           ],
         },

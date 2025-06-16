@@ -434,6 +434,122 @@ describe('gaq', () => {
       expect(reviewSpy.mock.calls[0][1]).toEqual(['bookId', 'id', 'content']);
     });
   });
+  describe('limit and maxLimit support', () => {
+    let server: GaqServer;
+    let bookSpy: jest.SpyInstance;
+    let reviewSpy: jest.SpyInstance;
+    let url: string;
+    beforeAll(async () => {
+      bookSpy = jest.fn();
+      reviewSpy = jest.fn();
+      server = getGraphQLAutoQueriesServer({
+        logger: getTestLogger(),
+        autoTypes: `
+          type Book @dbCollection(collectionName: "books") @limit(default: 1, max: 3){
+            id: ID
+            title: String
+            authorId: String
+            reviews: [Review] @fieldResolver(parentKey: "id", fieldKey: "bookId", limit: 1)
+          }
+        
+          type Review @dbCollection(collectionName: "reviews"){
+            id: ID
+            content: String
+            bookId: String
+            book: Book @fieldResolver(parentKey: "bookId", fieldKey: "id")
+          }
+        `,
+        dbAdapter: getMockedDatasource({
+          bookSpy: bookSpy as any,
+          reviewSpy: reviewSpy as any,
+        }),
+      });
+      ({ url } = await server.startGraphQLAutoQueriesServer({
+        listen: { port: 0 },
+      }));
+    });
+    beforeEach(() => {
+      bookSpy.mockClear();
+      reviewSpy.mockClear();
+    });
+    afterAll(async () => {
+      await server.stop();
+    });
+    it('should call the db provider and pass the default limit if no limit is passed', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                id
+                title
+                reviews {
+                  id
+                  content
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          },
+        },
+      };
+
+      const response = await request(url).post('/').send(queryData);
+      expect(response.body.errors).toBeUndefined();
+      expect(bookSpy.mock.calls[0][2].limit).toEqual(1);
+      expect(reviewSpy.mock.calls[0][2].limit).toEqual(1);
+    });
+    it('should call the db provider and pass the max limit if the limit is passed and is greater than the max limit', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                id
+                title
+                reviews {
+                  id
+                  content
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+            limit: 10,
+          },
+        },
+      };
+
+      const response = await request(url).post('/').send(queryData);
+      expect(response.body.errors).toBeUndefined();
+      expect(bookSpy.mock.calls[0][2].limit).toEqual(3);
+      expect(reviewSpy.mock.calls[0][2].limit).toEqual(1);
+    });
+    it('should call the db provider and NOT pass a limit if the directive is not present', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput) {
+            reviewGaqQueryResult(filters: $filters) {
+              result {
+                  id
+                  content
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          },
+        },
+      };
+
+      const response = await request(url).post('/').send(queryData);
+      expect(response.body.errors).toBeUndefined();
+      expect(reviewSpy.mock.calls[0][2].limit).toBeNull();
+    });
+  });
 
   describe('schema transformation support', () => {
     let protectedServer: GaqServer;

@@ -8,12 +8,12 @@ import {
   TypeNode,
   StringValueNode,
   visit,
+  IntValueNode,
 } from 'graphql';
 import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
   GaqContext,
-  GaqDbAdapter,
   GaqFieldResolverArguments,
   GaqFieldResolverDescription,
   GaqResolverDescription,
@@ -27,21 +27,25 @@ import { generateResolvers } from './resolver-builder';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
 import { mapSchema } from '@graphql-tools/utils';
-import DataLoader = require('dataloader');
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
 scalar GaqNestedFilterQuery
 
-# Gaq custom directive
+# Gaq custom directives
 directive @fieldResolver (
   parentKey: String!
   fieldKey: String!
+  limit: Int
 ) on FIELD_DEFINITION
 
 directive @dbCollection(
   collectionName: String!
 ) on OBJECT
+
+directive @limit(default: Int, max: Int) on OBJECT
+
+# End of Gaq custom directives
 
 input GaqSortingParams {
   "Must a field or nested field of the object queried. In case of nested field, use dot notation."
@@ -104,6 +108,69 @@ input GaqRootFiltersInput {
  * ```
  */
 
+function getDefaultAndMaxLimitFromDirective(def: ObjectTypeDefinitionNode): {
+  defaultLimit: number | null;
+  maxLimit: number | null;
+} {
+  const limitDirective = def.directives?.find(
+    (directive) => directive.name.value === 'limit'
+  );
+  const defaultLimit = limitDirective?.arguments?.find(
+    (arg) => arg.name.value === 'default'
+  )?.value as IntValueNode;
+  const defaultLimitValue = defaultLimit?.value
+    ? parseInt(defaultLimit?.value)
+    : null;
+  if (
+    defaultLimitValue &&
+    (isNaN(defaultLimitValue) || defaultLimitValue <= 0)
+  ) {
+    throw new Error(
+      `Default limit argument must be a positive integer on directive @limit on type ${def.name.value}`
+    );
+  }
+
+  const maxLimit = limitDirective?.arguments?.find(
+    (arg) => arg.name.value === 'max'
+  )?.value as IntValueNode;
+  const maxLimitValue = maxLimit?.value ? parseInt(maxLimit?.value) : null;
+  if (maxLimitValue && (isNaN(maxLimitValue) || maxLimitValue <= 0)) {
+    throw new Error(
+      `Max limit argument must be a positive integer on directive @limit on type ${def.name.value}`
+    );
+  }
+
+  return {
+    defaultLimit: defaultLimitValue,
+    maxLimit: maxLimitValue,
+  };
+}
+
+function getDbCollectionNameFromDirective(def: ObjectTypeDefinitionNode): {
+  dbCollectionName: string;
+} {
+  const dbCollectionDirective = def.directives?.find(
+    (directive) => directive.name.value === 'dbCollection'
+  );
+  if (!dbCollectionDirective) {
+    throw new Error(
+      `@dbCollection directive is required on type ${def.name.value}`
+    );
+  }
+
+  const dbCollectionName = dbCollectionDirective?.arguments?.find(
+    (arg) => arg.name.value === 'collectionName'
+  )?.value as StringValueNode;
+  if (!dbCollectionName) {
+    throw new Error(
+      `collectionName argument is required on directive @dbCollection on type ${def.name.value}`
+    );
+  }
+  return {
+    dbCollectionName: dbCollectionName.value,
+  };
+}
+
 function extractAllTypesDefinitionsFromSchema(
   schemaString: string
 ): DetailedGaqTypeDefinition[] {
@@ -115,27 +182,11 @@ function extractAllTypesDefinitionsFromSchema(
   const typeDefinitions = getObjectTypesDefinitionsFromDocumentNode(document);
 
   return typeDefinitions.map((def) => {
-    const dbCollectionDirective = def.directives?.find(
-      (directive) => directive.name.value === 'dbCollection'
-    );
-    if (!dbCollectionDirective) {
-      throw new Error(
-        `@dbCollection directive is required on type ${def.name.value}`
-      );
-    }
-    const dbCollectionName = dbCollectionDirective?.arguments?.find(
-      (arg) => arg.name.value === 'collectionName'
-    )?.value as StringValueNode;
-    if (!dbCollectionName) {
-      throw new Error(
-        `collectionName argument is required on directive @dbCollection on type ${def.name.value}`
-      );
-    }
-
     return {
       name: def.name.value,
       properties: extractDetailedGaqFieldDefinitions(def.fields),
-      dbCollectionName: dbCollectionName.value,
+      ...getDbCollectionNameFromDirective(def),
+      ...getDefaultAndMaxLimitFromDirective(def),
     };
   });
 }
@@ -152,13 +203,13 @@ function extractDetailedGaqFieldDefinitions(
   );
 }
 
-function extractFieldDefinition(
+function getParentAndFieldKeyFromDirective(
   field: FieldDefinitionNode
-): DetailedGaqFieldDefinition {
-  const typeName = extractTypeFromNestedType(field.type);
-
-  let fieldResolver: GaqFieldResolverArguments | null = null;
+): GaqFieldResolverArguments {
   const fieldResolverDirective = field.directives?.find(
+    (directive) => directive.name.value === 'fieldResolver'
+  );
+  field.directives?.find(
     (directive) => directive.name.value === 'fieldResolver'
   );
   if (fieldResolverDirective) {
@@ -181,10 +232,31 @@ function extractFieldDefinition(
       );
     }
     const fieldKey = (fieldKeyArgument as StringValueNode).value;
-    fieldResolver = { parentKey, fieldKey };
+
+    const limitArgument = fieldResolverDirective.arguments?.find(
+      (arg) => arg.name.value === 'limit'
+    )?.value;
+    const limit = limitArgument
+      ? parseInt((limitArgument as IntValueNode).value)
+      : null;
+    if (limit && (isNaN(limit) || limit <= 0)) {
+      throw new Error(
+        `Limit argument must be a positive integer on directive @fieldResolver on field ${field.name.value}`
+      );
+    }
+
+    return { parentKey, fieldKey, limit };
   }
+  return null;
+}
+
+function extractFieldDefinition(
+  field: FieldDefinitionNode
+): DetailedGaqFieldDefinition {
+  const typeName = extractTypeFromNestedType(field.type);
+
   return {
-    fieldResolver,
+    fieldResolver: getParentAndFieldKeyFromDirective(field),
     isArray: isArrayType(field.type),
     type: typeName,
   };
@@ -236,6 +308,7 @@ const getFieldResolversFromProperties = (
       fieldType: propertyToResolve.definition.type,
       fieldName: propertyToResolve.name,
       dataloaderName: `${typeDefinition.name}${propertyToResolve.name}Dataloader`,
+      limit: propertyToResolve.definition.fieldResolver.limit,
     } satisfies GaqFieldResolverDescription;
   });
 };
@@ -264,6 +337,8 @@ export const getAutoResolversAndDataloaders = (
       linkedType: typeDefinition.name,
       fieldResolvers,
       dbCollectionName: typeDefinition.dbCollectionName,
+      defaultLimit: typeDefinition.defaultLimit,
+      maxLimit: typeDefinition.maxLimit,
     } satisfies GaqResolverDescription;
   });
 

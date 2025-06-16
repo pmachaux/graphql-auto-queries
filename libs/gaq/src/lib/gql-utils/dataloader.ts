@@ -79,6 +79,7 @@ export const batchLoadFn =
           {
             logger,
             traceId: fieldResolver.dataloaderName,
+            limit: fieldResolver.limit,
           }
         );
         logger.debug(

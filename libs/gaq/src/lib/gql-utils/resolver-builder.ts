@@ -14,7 +14,11 @@ import graphqlFields = require('graphql-fields');
 
 const getStandardResolver = (
   linkedType: string,
-  dbCollectionName: string
+  dbCollectionName: string,
+  opts: {
+    defaultLimit: number | null;
+    maxLimit: number | null;
+  }
 ): GaqSchemaLevelResolver => {
   const logger = getLogger();
   const standardResolver: GaqSchemaLevelResolver = (
@@ -57,6 +61,10 @@ const getStandardResolver = (
         count,
       }));
     }
+    let limit = args.filters.limit ?? opts.defaultLimit;
+    if (limit && opts.maxLimit && limit > opts.maxLimit) {
+      limit = opts.maxLimit;
+    }
 
     return collectionClient
       .getFromGaqFilters(
@@ -65,7 +73,7 @@ const getStandardResolver = (
         {
           logger,
           sort: args.filters.sort,
-          limit: args.filters.limit,
+          limit,
           offset: args.filters.offset,
           traceId: contextValue.traceId,
         }
@@ -141,7 +149,11 @@ const getQueryAndFieldResolver = (
   const queryResolver = {
     [resolverDescription.queryName]: getStandardResolver(
       resolverDescription.linkedType,
-      resolverDescription.dbCollectionName
+      resolverDescription.dbCollectionName,
+      {
+        defaultLimit: resolverDescription.defaultLimit,
+        maxLimit: resolverDescription.maxLimit,
+      }
     ),
   };
 

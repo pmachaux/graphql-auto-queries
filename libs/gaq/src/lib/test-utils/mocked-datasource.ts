@@ -90,6 +90,14 @@ export const getMockedDatasource = (spies?: {
       }
       if (collectionName === 'reviews') {
         return {
+          getFromGaqFilters: async (
+            filters: GaqRootQueryFilter<{ bookId: string }>,
+            selectedFields: string[],
+            opts: GaqDbQueryOptions
+          ) => {
+            spies?.reviewSpy?.(filters, selectedFields, opts);
+            return reviews;
+          },
           getValuesInField: async (
             payload: { field: string; values: any[] },
             selectedFields: string[],

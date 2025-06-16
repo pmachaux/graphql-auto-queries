@@ -134,6 +134,8 @@ describe('schema-analyzer', () => {
           linkedType: 'Book',
           fieldResolvers: [],
           dbCollectionName: 'books',
+          defaultLimit: null,
+          maxLimit: null,
         },
       ]);
 
@@ -174,6 +176,8 @@ describe('schema-analyzer', () => {
         resultType: 'BookGaqResult',
         linkedType: 'Book',
         dbCollectionName: 'books',
+        defaultLimit: null,
+        maxLimit: null,
         fieldResolvers: [
           {
             parentKey: 'authorId',
@@ -182,6 +186,7 @@ describe('schema-analyzer', () => {
             fieldType: 'Author',
             fieldName: 'author',
             dataloaderName: 'BookauthorDataloader',
+            limit: null,
           },
         ],
       });
@@ -190,6 +195,56 @@ describe('schema-analyzer', () => {
         resultType: 'AuthorGaqResult',
         linkedType: 'Author',
         dbCollectionName: 'authors',
+        defaultLimit: null,
+        maxLimit: null,
+        fieldResolvers: [],
+      });
+    });
+    it('should generate schema and resolvers from auto types with field resolvers and limit and maxLimit', () => {
+      const options = {
+        autoTypes: `
+        type Book @dbCollection(collectionName: "books") @limit(default: 10, max: 100) {
+          title: String
+          authorId: String
+          author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id", limit: 5)
+        }
+        type Author @dbCollection(collectionName: "authors") {
+          id: String
+          name: String
+        }
+      `,
+        dbAdapter: {
+          getCollectionAdapter: jest.fn(),
+        },
+      };
+
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      expect(gaqResolverDescriptions[0]).toEqual({
+        queryName: 'bookGaqQueryResult',
+        resultType: 'BookGaqResult',
+        linkedType: 'Book',
+        dbCollectionName: 'books',
+        defaultLimit: 10,
+        maxLimit: 100,
+        fieldResolvers: [
+          {
+            parentKey: 'authorId',
+            fieldKey: 'id',
+            isArray: false,
+            fieldType: 'Author',
+            fieldName: 'author',
+            dataloaderName: 'BookauthorDataloader',
+            limit: 5,
+          },
+        ],
+      });
+      expect(gaqResolverDescriptions[1]).toEqual({
+        queryName: 'authorGaqQueryResult',
+        resultType: 'AuthorGaqResult',
+        linkedType: 'Author',
+        dbCollectionName: 'authors',
+        defaultLimit: null,
+        maxLimit: null,
         fieldResolvers: [],
       });
     });
@@ -218,6 +273,8 @@ describe('schema-analyzer', () => {
         resultType: 'BookGaqResult',
         linkedType: 'Book',
         dbCollectionName: 'books',
+        defaultLimit: null,
+        maxLimit: null,
         fieldResolvers: [
           {
             parentKey: 'id',
@@ -226,6 +283,7 @@ describe('schema-analyzer', () => {
             fieldType: 'Review',
             fieldName: 'reviews',
             dataloaderName: 'BookreviewsDataloader',
+            limit: null,
           },
         ],
       });
@@ -234,6 +292,8 @@ describe('schema-analyzer', () => {
         resultType: 'ReviewGaqResult',
         linkedType: 'Review',
         dbCollectionName: 'reviews',
+        defaultLimit: null,
+        maxLimit: null,
         fieldResolvers: [
           {
             parentKey: 'bookId',
@@ -242,6 +302,7 @@ describe('schema-analyzer', () => {
             fieldType: 'Book',
             fieldName: 'book',
             dataloaderName: 'ReviewbookDataloader',
+            limit: null,
           },
         ],
       });
@@ -351,6 +412,8 @@ describe('schema-analyzer', () => {
         resultType: 'BookGaqResult',
         linkedType: 'Book',
         dbCollectionName: 'books',
+        defaultLimit: null,
+        maxLimit: null,
         fieldResolvers: [
           {
             parentKey: 'authorId',
@@ -359,6 +422,7 @@ describe('schema-analyzer', () => {
             fieldType: 'Author',
             fieldName: 'author',
             dataloaderName: 'BookauthorDataloader',
+            limit: null,
           },
           {
             parentKey: 'id',
@@ -367,6 +431,7 @@ describe('schema-analyzer', () => {
             fieldType: 'Review',
             fieldName: 'reviews',
             dataloaderName: 'BookreviewsDataloader',
+            limit: null,
           },
         ],
       });
@@ -406,6 +471,7 @@ describe('schema-analyzer', () => {
         fieldType: 'Author',
         fieldName: 'author',
         dataloaderName: 'BookauthorDataloader',
+        limit: null,
       });
       expect(gaqResolverDescriptions[1].fieldResolvers[0]).toEqual({
         parentKey: 'id',
@@ -413,6 +479,7 @@ describe('schema-analyzer', () => {
         isArray: true,
         fieldType: 'Book',
         fieldName: 'books',
+        limit: null,
         dataloaderName: 'AuthorbooksDataloader',
       });
     });

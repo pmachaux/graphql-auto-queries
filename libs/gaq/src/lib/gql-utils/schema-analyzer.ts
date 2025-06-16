@@ -348,7 +348,7 @@ export const getAutoResolversAndDataloaders = (
 };
 
 export const getAutoSchemaAndResolvers = (
-  options: Pick<GaqServerOptions, 'autoTypes' | 'dbAdapter'>
+  options: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>
 ): {
   gaqSchema: string;
   gaqResolverDescriptions: GaqResolverDescription[];
@@ -356,13 +356,13 @@ export const getAutoSchemaAndResolvers = (
   const logger = getLogger();
   logger.debug('Building auto resolvers');
   const { gaqResolverDescriptions } = getAutoResolversAndDataloaders(
-    options.autoTypes
+    options.typeDefs
   );
 
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
     return {
-      gaqSchema: options.autoTypes,
+      gaqSchema: options.typeDefs,
       gaqResolverDescriptions: [],
     };
   }
@@ -373,7 +373,7 @@ export const getAutoSchemaAndResolvers = (
   logger.debug('Building auto schema');
   const gaqSchema =
     gaqDefaultScalarsAndInputs +
-    options.autoTypes +
+    options.typeDefs +
     gaqResolverDescriptions
       .map(
         (resolver) => `type ${resolver.resultType} {
@@ -424,14 +424,7 @@ export const setDbCollectionNameMap = (
 };
 
 export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
-  options: Pick<
-    GaqServerOptions,
-    | 'autoTypes'
-    | 'standardGraphqlTypes'
-    | 'standardApolloResolvers'
-    | 'schemaMapper'
-    | 'dbAdapter'
-  >
+  options: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>
 ): Pick<ApolloServerOptions<TContext>, 'schema'> & {
   gaqResolverDescriptions: GaqResolverDescription[];
   dbCollectionNameMap: Map<string, string>;
@@ -443,35 +436,23 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   const autoTypesDefs = gql`
     ${gaqSchema}
   `;
-  const standardGraphqlTypesDefs = options.standardGraphqlTypes
-    ? gql`
-        ${options.standardGraphqlTypes}
-      `
-    : null;
-  const typeDefs = standardGraphqlTypesDefs
-    ? mergeTypeDefs([autoTypesDefs, standardGraphqlTypesDefs])
-    : autoTypesDefs;
 
-  setDbCollectionNameMap(typeDefs, dbCollectionNameMap);
+  setDbCollectionNameMap(autoTypesDefs, dbCollectionNameMap);
 
   logger.debug('Merged schema');
-  const resolvers = generateResolvers<TContext>({
+  const resolvers = generateResolvers({
     dbCollectionNameMap,
     gaqResolverDescriptions,
-    standardApolloResolvers: options.standardApolloResolvers,
   });
   logger.debug('Auto resolvers built and merged with standard ones');
 
   const executableSchema = makeExecutableSchema({
-    typeDefs,
+    typeDefs: autoTypesDefs,
     resolvers,
   });
-  const schema = options.schemaMapper
-    ? mapSchema(executableSchema, options.schemaMapper(executableSchema))
-    : executableSchema;
 
   return {
-    schema,
+    schema: executableSchema,
     gaqResolverDescriptions,
     dbCollectionNameMap,
   };

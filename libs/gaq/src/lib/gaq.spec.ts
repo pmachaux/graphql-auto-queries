@@ -6,11 +6,18 @@ import {
   GaqRootQueryFilter,
 } from './interfaces/common.interfaces';
 import * as request from 'supertest';
-import { getDirective, MapperKind, SchemaMapper } from '@graphql-tools/utils';
+import {
+  getDirective,
+  MapperKind,
+  mapSchema,
+  SchemaMapper,
+} from '@graphql-tools/utils';
 import { defaultFieldResolver, GraphQLSchema } from 'graphql';
 import { getTestLogger } from './test-utils/test-logger';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
+import { makeExecutableSchema, mergeSchemas } from '@graphql-tools/schema';
+import { mergeTypeDefs } from '@graphql-tools/merge';
 describe('gaq', () => {
   describe('basic features', () => {
     let server: GaqServer;
@@ -20,9 +27,9 @@ describe('gaq', () => {
     beforeAll(async () => {
       bookSpy = jest.fn();
       bookCountSpy = jest.fn();
-      const { schema, withGaqContextFn } = getGaqTools({
+      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
-        autoTypes: `
+        typeDefs: `
           type Book @dbCollection(collectionName: "books"){
             id: ID
             title: String
@@ -290,9 +297,9 @@ describe('gaq', () => {
       bookSpy = jest.fn();
       authorSpy = jest.fn();
       reviewSpy = jest.fn();
-      const { schema, withGaqContextFn } = getGaqTools({
+      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
-        autoTypes: `
+        typeDefs: `
           type Book @dbCollection(collectionName: "books"){
             id: ID
             title: String
@@ -456,9 +463,9 @@ describe('gaq', () => {
     beforeAll(async () => {
       bookSpy = jest.fn();
       reviewSpy = jest.fn();
-      const { schema, withGaqContextFn } = getGaqTools({
+      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
-        autoTypes: `
+        typeDefs: `
           type Book @dbCollection(collectionName: "books") @limit(default: 1, max: 3){
             id: ID
             title: String
@@ -576,12 +583,12 @@ describe('gaq', () => {
     let urlProtectedServer: string;
     let getUserFn: jest.Mock;
     beforeAll(async () => {
-      const { schema, withGaqContextFn } = getGaqTools({
+      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
-        autoTypes: `
-          directive @auth(
-            role: String!,
-          ) on OBJECT | FIELD_DEFINITION
+        typeDefs: `
+        directive @auth(
+          role: String!,
+        ) on OBJECT | FIELD_DEFINITION
 
           type Book @dbCollection(collectionName: "books") @auth(role: "user"){
             id: ID
@@ -597,40 +604,44 @@ describe('gaq', () => {
           }
         `,
         dbAdapter: getMockedDatasource(),
-        schemaMapper: (schema: GraphQLSchema) => {
-          const typeDirectiveArgumentMaps: Record<string, any> = {};
-          return {
-            [MapperKind.TYPE]: (type) => {
-              const authDirective = getDirective(schema, type, 'auth')?.[0];
-              if (authDirective) {
-                typeDirectiveArgumentMaps[type.name] = authDirective;
-              }
-              return undefined;
-            },
-            [MapperKind.OBJECT_FIELD]: (fieldConfig, _fieldName, typeName) => {
-              const authDirective =
-                getDirective(schema, fieldConfig, 'auth')?.[0] ??
-                typeDirectiveArgumentMaps[typeName];
-              if (authDirective) {
-                const { role } = authDirective;
-                if (role) {
-                  const { resolve = defaultFieldResolver } = fieldConfig;
-                  fieldConfig.resolve = function (source, args, context, info) {
-                    const user = getUserFn();
-                    if (!user.roles.includes(role)) {
-                      throw new Error('not authorized');
-                    }
-                    return resolve(source, args, context, info);
-                  };
-                  return fieldConfig;
-                }
-              }
-            },
-          } satisfies SchemaMapper;
-        },
       });
+
+      const authTransformer = (schema: GraphQLSchema) => {
+        const typeDirectiveArgumentMaps: Record<string, any> = {};
+        return mapSchema(schema, {
+          [MapperKind.TYPE]: (type) => {
+            const authDirective = getDirective(schema, type, 'auth')?.[0];
+            if (authDirective) {
+              typeDirectiveArgumentMaps[type.name] = authDirective;
+            }
+            return undefined;
+          },
+          [MapperKind.OBJECT_FIELD]: (fieldConfig, _fieldName, typeName) => {
+            const authDirective =
+              getDirective(schema, fieldConfig, 'auth')?.[0] ??
+              typeDirectiveArgumentMaps[typeName];
+            if (authDirective) {
+              const { role } = authDirective;
+              if (role) {
+                const { resolve = defaultFieldResolver } = fieldConfig;
+                fieldConfig.resolve = function (source, args, context, info) {
+                  const user = getUserFn();
+                  if (!user.roles.includes(role)) {
+                    throw new Error('not authorized');
+                  }
+                  return resolve(source, args, context, info);
+                };
+                return fieldConfig;
+              }
+            }
+          },
+        } satisfies SchemaMapper);
+      };
+
+      const schemaWithAuth = authTransformer(schema);
+
       const server = new ApolloServer({
-        schema,
+        schema: schemaWithAuth,
       });
       ({ url: urlProtectedServer } = await startStandaloneServer(server, {
         listen: { port: 0 },

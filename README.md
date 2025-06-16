@@ -18,7 +18,8 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Incoming features
 
-- Simplify drastically the configuration. Max everything work from one directive. No more autoTypes etc... Also return the schema to give more flexibility to devs.
+- Add directive @gaqIgnore to skip resolver creation for a particular type
+- Ensure input types are ignore with testing
 - Federation support as subgraph
 - PostGres connector
 

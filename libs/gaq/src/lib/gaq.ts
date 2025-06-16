@@ -10,7 +10,7 @@ type GqlContextFn = ({ req, res }: { req: any; res: any }) => Promise<any>;
 export function getGaqTools<TContext extends GaqContext>(
   config: GaqServerOptions
 ): {
-  schema: GraphQLSchema;
+  gqaSchema: GraphQLSchema;
   withGaqContextFn: ({ req, res }: { req: any; res: any }) => Promise<TContext>;
 } {
   setLogger(config.logger);
@@ -39,7 +39,7 @@ export function getGaqTools<TContext extends GaqContext>(
     };
 
     return {
-      schema,
+      gqaSchema: schema,
       withGaqContextFn,
     };
   } catch (error) {

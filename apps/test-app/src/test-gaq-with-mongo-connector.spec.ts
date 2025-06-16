@@ -5,6 +5,7 @@ import { DateTimeResolver } from 'graphql-scalars';
 import request from 'supertest';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
+import { mergeSchemas } from '@graphql-tools/schema';
 
 describe('Testing Gaq With Mongo connector', () => {
   let server: GaqServer;
@@ -16,8 +17,9 @@ describe('Testing Gaq With Mongo connector', () => {
       dbName: 'sample_mflix',
     });
     mongoClient = client;
-    const { schema, withGaqContextFn } = getGaqTools({
-      autoTypes: `
+    const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+      typeDefs: `
+        scalar DateTime
           type Movie @dbCollection(collectionName: "movies"){
             _id: ID
             title: String
@@ -35,16 +37,17 @@ describe('Testing Gaq With Mongo connector', () => {
           }
   
         `,
-      standardGraphqlTypes: `
-          scalar DateTime
-        `,
-      standardApolloResolvers: {
-        DateTime: DateTimeResolver,
-      },
       dbAdapter,
     });
+
+    const mergedSchema = mergeSchemas({
+      schemas: [schema],
+      resolvers: {
+        DateTime: DateTimeResolver,
+      },
+    });
     const server = new ApolloServer({
-      schema,
+      schema: mergedSchema,
     });
     ({ url } = await startStandaloneServer(server, {
       listen: { port: 0 },

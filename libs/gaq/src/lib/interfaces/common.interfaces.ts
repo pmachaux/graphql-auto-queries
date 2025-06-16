@@ -34,15 +34,9 @@ export interface GaqContext extends BaseContext {
  */
 
 export type GaqOnlyServerOptions = {
-  autoTypes: string;
+  typeDefs: string;
   dbAdapter: GaqDbAdapter;
-  standardGraphqlTypes?: ApolloServerOptions<GaqContext>['typeDefs'];
-  standardApolloResolvers?: IResolvers<
-    { Query?: Record<string, any> } & Record<string, any>,
-    GaqContext
-  >;
   logger?: GaqLogger;
-  schemaMapper?: (schema: GraphQLSchema) => SchemaMapper;
 };
 
 export type GaqServerOptions = Prettify<

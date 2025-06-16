@@ -216,41 +216,21 @@ export const getResolversFromDescriptions = (
   );
 };
 
-export const generateResolvers = <TContext extends GaqContext>({
+export const generateResolvers = ({
   gaqResolverDescriptions,
-  standardApolloResolvers,
   dbCollectionNameMap,
 }: {
   dbCollectionNameMap: Map<string, string>;
   gaqResolverDescriptions: GaqResolverDescription[];
-  standardApolloResolvers:
-    | IResolvers<
-        {
-          Query?: Record<string, any>;
-        } & Record<string, any>,
-        GaqContext
-      >
-    | undefined;
 }) => {
   const gaqResolvers = getResolversFromDescriptions(
     gaqResolverDescriptions,
     dbCollectionNameMap
   );
-  const otherResolvers = standardApolloResolvers
-    ? omit(
-        standardApolloResolvers as IResolvers<
-          { Query?: Record<string, any> },
-          TContext
-        >,
-        'Query'
-      )
-    : {};
 
   const resolvers = {
-    ...otherResolvers,
     GaqNestedFilterQuery: gaqNestedFilterQueryScalar,
     Query: {
-      ...(standardApolloResolvers?.Query ?? {}),
       ...gaqResolvers.Query,
     },
     ...omit(gaqResolvers, 'Query'),

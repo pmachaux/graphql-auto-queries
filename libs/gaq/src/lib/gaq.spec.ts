@@ -1,5 +1,5 @@
 import { GaqServer } from './interfaces/common.interfaces';
-import { getGraphQLAutoQueriesServer } from './gaq';
+import { getGaqTools } from './gaq';
 import { getMockedDatasource } from './test-utils/mocked-datasource';
 import {
   GaqFilterComparators,
@@ -9,6 +9,8 @@ import * as request from 'supertest';
 import { getDirective, MapperKind, SchemaMapper } from '@graphql-tools/utils';
 import { defaultFieldResolver, GraphQLSchema } from 'graphql';
 import { getTestLogger } from './test-utils/test-logger';
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
 describe('gaq', () => {
   describe('basic features', () => {
     let server: GaqServer;
@@ -18,7 +20,7 @@ describe('gaq', () => {
     beforeAll(async () => {
       bookSpy = jest.fn();
       bookCountSpy = jest.fn();
-      server = getGraphQLAutoQueriesServer({
+      const { schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         autoTypes: `
           type Book @dbCollection(collectionName: "books"){
@@ -47,8 +49,14 @@ describe('gaq', () => {
           bookCountSpy: bookCountSpy as any,
         }),
       });
-      ({ url } = await server.startGraphQLAutoQueriesServer({
+      const server = new ApolloServer({
+        schema,
+      });
+      ({ url } = await startStandaloneServer(server, {
         listen: { port: 0 },
+        context: async ({ req, res }) => {
+          return withGaqContextFn({ req, res });
+        },
       }));
     });
     beforeEach(() => {
@@ -282,7 +290,7 @@ describe('gaq', () => {
       bookSpy = jest.fn();
       authorSpy = jest.fn();
       reviewSpy = jest.fn();
-      server = getGraphQLAutoQueriesServer({
+      const { schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         autoTypes: `
           type Book @dbCollection(collectionName: "books"){
@@ -312,8 +320,14 @@ describe('gaq', () => {
           reviewSpy: reviewSpy as any,
         }),
       });
-      ({ url } = await server.startGraphQLAutoQueriesServer({
+      const server = new ApolloServer({
+        schema,
+      });
+      ({ url } = await startStandaloneServer(server, {
         listen: { port: 0 },
+        context: async ({ req, res }) => {
+          return withGaqContextFn({ req, res });
+        },
       }));
     });
     beforeEach(() => {
@@ -442,7 +456,7 @@ describe('gaq', () => {
     beforeAll(async () => {
       bookSpy = jest.fn();
       reviewSpy = jest.fn();
-      server = getGraphQLAutoQueriesServer({
+      const { schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         autoTypes: `
           type Book @dbCollection(collectionName: "books") @limit(default: 1, max: 3){
@@ -464,8 +478,14 @@ describe('gaq', () => {
           reviewSpy: reviewSpy as any,
         }),
       });
-      ({ url } = await server.startGraphQLAutoQueriesServer({
+      const server = new ApolloServer({
+        schema,
+      });
+      ({ url } = await startStandaloneServer(server, {
         listen: { port: 0 },
+        context: async ({ req, res }) => {
+          return withGaqContextFn({ req, res });
+        },
       }));
     });
     beforeEach(() => {
@@ -556,7 +576,7 @@ describe('gaq', () => {
     let urlProtectedServer: string;
     let getUserFn: jest.Mock;
     beforeAll(async () => {
-      protectedServer = getGraphQLAutoQueriesServer({
+      const { schema, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         autoTypes: `
           directive @auth(
@@ -609,10 +629,15 @@ describe('gaq', () => {
           } satisfies SchemaMapper;
         },
       });
-      ({ url: urlProtectedServer } =
-        await protectedServer.startGraphQLAutoQueriesServer({
-          listen: { port: 0 },
-        }));
+      const server = new ApolloServer({
+        schema,
+      });
+      ({ url: urlProtectedServer } = await startStandaloneServer(server, {
+        listen: { port: 0 },
+        context: async ({ req, res }) => {
+          return withGaqContextFn({ req, res });
+        },
+      }));
     });
     afterAll(async () => {
       await protectedServer.stop();

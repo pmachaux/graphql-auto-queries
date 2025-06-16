@@ -1,12 +1,10 @@
-import {
-  GaqFilterComparators,
-  GaqServer,
-  getGraphQLAutoQueriesServer,
-} from '@gaq';
+import { GaqFilterComparators, GaqServer, getGaqTools } from '@gaq';
 import { getMongoGaqDbConnector } from '@gaq/mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
 import request from 'supertest';
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
 
 describe('Testing Gaq With Mongo connector', () => {
   let server: GaqServer;
@@ -18,7 +16,7 @@ describe('Testing Gaq With Mongo connector', () => {
       dbName: 'sample_mflix',
     });
     mongoClient = client;
-    server = getGraphQLAutoQueriesServer({
+    const { schema, withGaqContextFn } = getGaqTools({
       autoTypes: `
           type Movie @dbCollection(collectionName: "movies"){
             _id: ID
@@ -45,8 +43,14 @@ describe('Testing Gaq With Mongo connector', () => {
       },
       dbAdapter,
     });
-    ({ url } = await server.startGraphQLAutoQueriesServer({
+    const server = new ApolloServer({
+      schema,
+    });
+    ({ url } = await startStandaloneServer(server, {
       listen: { port: 0 },
+      context: async ({ req, res }) => {
+        return withGaqContextFn({ req, res });
+      },
     }));
   }, 20000);
 

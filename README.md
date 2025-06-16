@@ -18,8 +18,8 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Incoming features
 
+- Simplify drastically the configuration. Max everything work from one directive. No more autoTypes etc... Also return the schema to give more flexibility to devs.
 - Federation support as subgraph
-- Add option for default limit and max limit in queries
 - PostGres connector
 
 ## Usage Example

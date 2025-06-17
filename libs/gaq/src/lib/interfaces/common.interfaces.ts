@@ -58,6 +58,11 @@ export type GaqFieldResolverDescription = Prettify<
   }
 >;
 
+export type GaqFederationReferenceResolverDescription = {
+  keys: string[];
+  dataloaderName: string;
+};
+
 export interface GaqResolverDescription {
   queryName: string;
   resultType: string;
@@ -66,6 +71,7 @@ export interface GaqResolverDescription {
   dbCollectionName: string;
   defaultLimit: number | null;
   maxLimit: number | null;
+  federationReferenceResolver: GaqFederationReferenceResolverDescription | null;
 }
 
 export interface DetailedGaqFieldDefinition {
@@ -80,6 +86,7 @@ export interface DetailedGaqTypeDefinition {
   dbCollectionName: string;
   defaultLimit: number | null;
   maxLimit: number | null;
+  federationKeys: string[];
 }
 
 export interface GaqResult<T extends object> {

@@ -51,6 +51,7 @@ describe('getResolversFromDescriptions', () => {
         fieldResolvers: [],
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
       },
     ];
 
@@ -135,6 +136,7 @@ describe('getResolversFromDescriptions', () => {
         fieldResolvers: [],
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
       },
     ];
 
@@ -171,6 +173,7 @@ describe('getResolversFromDescriptions', () => {
         fieldResolvers: [],
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
       },
     ];
 
@@ -210,6 +213,7 @@ describe('getResolversFromDescriptions', () => {
           dbCollectionName: 'books',
           defaultLimit: null,
           maxLimit: null,
+          federationReferenceResolver: null,
           fieldResolvers: [
             {
               parentKey: 'authorId',
@@ -245,6 +249,7 @@ describe('getResolversFromDescriptions', () => {
           dbCollectionName: 'books',
           defaultLimit: null,
           maxLimit: null,
+          federationReferenceResolver: null,
           fieldResolvers: [],
         },
       ];
@@ -269,6 +274,7 @@ describe('getResolversFromDescriptions', () => {
           dbCollectionName: 'books',
           defaultLimit: null,
           maxLimit: null,
+          federationReferenceResolver: null,
           fieldResolvers: [
             {
               parentKey: 'authorId',

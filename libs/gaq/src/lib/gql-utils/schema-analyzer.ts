@@ -128,6 +128,36 @@ function getDbCollectionNameFromDirective(def: ObjectTypeDefinitionNode): {
   };
 }
 
+function getFederationKeysFromDirective(def: ObjectTypeDefinitionNode): {
+  federationKeys: string[];
+} {
+  const federationKeys: string[] = [];
+  const federationKeysDirective = def.directives?.filter(
+    (directive) => directive.name.value === 'key'
+  );
+  if (federationKeysDirective.length === 0) {
+    return {
+      federationKeys: [],
+    };
+  }
+
+  federationKeysDirective.forEach((directive) => {
+    const fields = directive.arguments?.find(
+      (arg) => arg.name.value === 'fields'
+    )?.value as StringValueNode;
+    if (!fields) {
+      throw new Error(
+        `fields argument is required on directive @keys on type ${def.name.value}`
+      );
+    }
+    federationKeys.push(...fields.value.split(' '));
+  });
+
+  return {
+    federationKeys,
+  };
+}
+
 function extractAllTypesDefinitionsFromSchema(
   schemaString: string
 ): DetailedGaqTypeDefinition[] {
@@ -151,6 +181,7 @@ function extractAllTypesDefinitionsFromSchema(
         properties: extractDetailedGaqFieldDefinitions(def.fields),
         ...getDbCollectionNameFromDirective(def),
         ...getDefaultAndMaxLimitFromDirective(def),
+        ...getFederationKeysFromDirective(def),
       };
     });
 }
@@ -303,6 +334,13 @@ export const getAutoResolversAndDataloaders = (
       dbCollectionName: typeDefinition.dbCollectionName,
       defaultLimit: typeDefinition.defaultLimit,
       maxLimit: typeDefinition.maxLimit,
+      federationReferenceResolver:
+        typeDefinition.federationKeys.length === 0
+          ? null
+          : {
+              keys: typeDefinition.federationKeys,
+              dataloaderName: `${typeDefinition.name}federationReferenceDataloader`,
+            },
     } satisfies GaqResolverDescription;
   });
 

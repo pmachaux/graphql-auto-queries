@@ -134,6 +134,7 @@ describe('schema-analyzer', () => {
           dbCollectionName: 'books',
           defaultLimit: null,
           maxLimit: null,
+          federationReferenceResolver: null,
         },
       ]);
 
@@ -178,6 +179,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'books',
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
         fieldResolvers: [
           {
             parentKey: 'authorId',
@@ -197,6 +199,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'authors',
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
         fieldResolvers: [],
       });
     });
@@ -228,6 +231,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'books',
         defaultLimit: 10,
         maxLimit: 100,
+        federationReferenceResolver: null,
         fieldResolvers: [
           {
             parentKey: 'authorId',
@@ -247,6 +251,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'authors',
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
         fieldResolvers: [],
       });
     });
@@ -279,6 +284,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'books',
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
         fieldResolvers: [
           {
             parentKey: 'id',
@@ -298,6 +304,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'reviews',
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
         fieldResolvers: [
           {
             parentKey: 'bookId',
@@ -422,6 +429,7 @@ describe('schema-analyzer', () => {
         dbCollectionName: 'books',
         defaultLimit: null,
         maxLimit: null,
+        federationReferenceResolver: null,
         fieldResolvers: [
           {
             parentKey: 'authorId',
@@ -525,6 +533,45 @@ describe('schema-analyzer', () => {
         logger: getTestLogger(),
       });
       expect(gaqResolverDescriptions).toEqual([]);
+    });
+    it('should handle federation keys', () => {
+      const options = {
+        typeDefs: `
+        type Book @dbCollection(collectionName: "books") @key(fields: "id authorId") {
+          id: ID
+          authorId: String
+          title: String
+        }
+
+        type Author @dbCollection(collectionName: "authors") @key(fields: "id") {
+          id: ID
+          name: String
+        }
+
+        type Review @dbCollection(collectionName: "reviews") @key(fields: "id") @key(fields: "bookId") {
+          id: ID
+          bookId: String
+        }
+      `,
+        dbAdapter: {
+          getCollectionAdapter: jest.fn(),
+        },
+      };
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
+        logger: getTestLogger(),
+      });
+      expect(gaqResolverDescriptions[0].federationReferenceResolver).toEqual({
+        keys: ['id', 'authorId'],
+        dataloaderName: 'BookfederationReferenceDataloader',
+      });
+      expect(gaqResolverDescriptions[1].federationReferenceResolver).toEqual({
+        keys: ['id'],
+        dataloaderName: 'AuthorfederationReferenceDataloader',
+      });
+      expect(gaqResolverDescriptions[2].federationReferenceResolver).toEqual({
+        keys: ['id', 'bookId'],
+        dataloaderName: 'ReviewfederationReferenceDataloader',
+      });
     });
   });
 });

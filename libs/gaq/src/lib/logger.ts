@@ -1,7 +1,7 @@
 import * as winston from 'winston';
 import { GaqLogger } from './interfaces/common.interfaces';
 
-const createDefaultLogger = (): GaqLogger => {
+export const getDefaultLogger = (): GaqLogger => {
   return winston.createLogger({
     level: 'debug',
     format: winston.format.combine(
@@ -13,18 +13,4 @@ const createDefaultLogger = (): GaqLogger => {
     ),
     transports: [new winston.transports.Console()],
   });
-};
-
-let logger!: GaqLogger;
-
-export const setLogger = (gaqLogger?: GaqLogger) => {
-  logger = gaqLogger ?? createDefaultLogger();
-};
-
-export const getLogger = (): GaqLogger => {
-  if (!logger) {
-    logger = createDefaultLogger();
-    logger.warn('Logger not set, using default logger');
-  }
-  return logger;
 };

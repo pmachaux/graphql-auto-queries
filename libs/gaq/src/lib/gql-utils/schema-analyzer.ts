@@ -16,6 +16,7 @@ import {
   GaqContext,
   GaqFieldResolverArguments,
   GaqFieldResolverDescription,
+  GaqLogger,
   GaqResolverDescription,
   GaqServerOptions,
 } from '../interfaces/common.interfaces';
@@ -23,7 +24,6 @@ import gql from 'graphql-tag';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { getLogger } from '../logger';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -313,21 +313,21 @@ export const getAutoResolversAndDataloaders = (
 };
 
 export const getAutoSchemaAndResolvers = (
-  options: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>
+  config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
+  { logger }: { logger: GaqLogger }
 ): {
   gaqSchema: string;
   gaqResolverDescriptions: GaqResolverDescription[];
 } => {
-  const logger = getLogger();
   logger.debug('Building auto resolvers');
   const { gaqResolverDescriptions } = getAutoResolversAndDataloaders(
-    options.typeDefs
+    config.typeDefs
   );
 
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
     return {
-      gaqSchema: options.typeDefs,
+      gaqSchema: config.typeDefs,
       gaqResolverDescriptions: [],
     };
   }
@@ -338,7 +338,7 @@ export const getAutoSchemaAndResolvers = (
   logger.debug('Building auto schema');
   const gaqSchema =
     gaqDefaultScalarsAndInputs +
-    options.typeDefs +
+    config.typeDefs +
     gaqResolverDescriptions
       .map(
         (resolver) => `type ${resolver.resultType} {
@@ -389,15 +389,17 @@ export const setDbCollectionNameMap = (
 };
 
 export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
-  options: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>
+  config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
+  { logger }: { logger: GaqLogger }
 ): Pick<ApolloServerOptions<TContext>, 'schema'> & {
   gaqResolverDescriptions: GaqResolverDescription[];
   dbCollectionNameMap: Map<string, string>;
 } => {
-  const logger = getLogger();
   const dbCollectionNameMap = new Map<string, string>();
-  const { gaqSchema, gaqResolverDescriptions } =
-    getAutoSchemaAndResolvers(options);
+  const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
+    config,
+    { logger }
+  );
   const autoTypesDefs = gql`
     ${gaqSchema}
   `;
@@ -408,6 +410,7 @@ export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
   const resolvers = generateResolvers({
     dbCollectionNameMap,
     gaqResolverDescriptions,
+    logger,
   });
   logger.debug('Auto resolvers built and merged with standard ones');
 

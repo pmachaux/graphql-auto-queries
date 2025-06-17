@@ -1,6 +1,6 @@
 import { GaqContext, GaqServerOptions } from './interfaces/common.interfaces';
 import { getMergedSchemaAndResolvers } from './gql-utils/schema-analyzer';
-import { getLogger, setLogger } from './logger';
+import { getDefaultLogger } from './logger';
 import { GraphQLSchema, parse } from 'graphql';
 import { randomUUID } from 'crypto';
 import { analyzeQueryForDataloaders } from './gql-utils/dataloader';
@@ -13,13 +13,12 @@ export function getGaqTools<TContext extends GaqContext>(
   gqaSchema: GraphQLSchema;
   withGaqContextFn: ({ req, res }: { req: any; res: any }) => Promise<TContext>;
 } {
-  setLogger(config.logger);
-  const logger = getLogger();
+  const logger = config.logger ?? getDefaultLogger();
 
   logger.info('Creating GraphQL Auto Queries Server...');
   try {
     const { schema, gaqResolverDescriptions, dbCollectionNameMap } =
-      getMergedSchemaAndResolvers(config);
+      getMergedSchemaAndResolvers(config, { logger });
 
     const withGaqContextFn: GqlContextFn = async ({ req, res }) => {
       const ast = req.body.query ? parse(req.body.query) : null;
@@ -32,6 +31,7 @@ export function getGaqTools<TContext extends GaqContext>(
               gaqResolverDescriptions,
               dbCollectionNameMap,
               gaqDbClient: config.dbAdapter,
+              logger,
             }).gaqDataloaders
           : new Map(),
         traceId,

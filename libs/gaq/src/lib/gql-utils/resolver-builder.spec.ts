@@ -5,11 +5,9 @@ import {
 import {
   GaqFilterComparators,
   GaqResolverDescription,
-  GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
-import { getTestLogger } from '../test-utils/test-logger';
-import { setLogger } from '../logger';
+import { getTestLogger } from '../../mocks';
 
 jest.mock('graphql-fields', () =>
   jest.fn().mockReturnValue({
@@ -25,9 +23,8 @@ describe('getResolversFromDescriptions', () => {
   let gaqDataloaders: Map<string, DataLoader<any, any, any>>;
   let BookauthorDataloader: jest.Mock;
   let BookreviewsDataloader: jest.Mock;
-  let getFromGaqFiltersSpy: jest.Mock;
+
   beforeEach(() => {
-    setLogger(getTestLogger());
     dbCollectionNameMap = new Map([
       ['Book', 'books'],
       ['Author', 'authors'],
@@ -72,7 +69,8 @@ describe('getResolversFromDescriptions', () => {
 
     const resolvers = getResolversFromDescriptions(
       mockDescriptions,
-      dbCollectionNameMap
+      dbCollectionNameMap,
+      { logger: getTestLogger() }
     );
     expect(resolvers).toHaveProperty('Query');
     expect(resolvers.Query).toHaveProperty('bookGaqQueryResult');
@@ -150,7 +148,8 @@ describe('getResolversFromDescriptions', () => {
 
     const resolvers = getResolversFromDescriptions(
       mockDescriptions,
-      dbCollectionNameMap
+      dbCollectionNameMap,
+      { logger: getTestLogger() }
     );
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(
@@ -185,7 +184,8 @@ describe('getResolversFromDescriptions', () => {
 
     const resolvers = getResolversFromDescriptions(
       mockDescriptions,
-      dbCollectionNameMap
+      dbCollectionNameMap,
+      { logger: getTestLogger() }
     );
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(
@@ -224,24 +224,14 @@ describe('getResolversFromDescriptions', () => {
         },
       ];
 
-      const standardApolloResolvers = {
-        Query: {
-          customQuery: () => 'custom result',
-        },
-        Book: {
-          title: (parent: any) => parent.title,
-        },
-      };
-
       const resolvers = generateResolvers({
         dbCollectionNameMap,
         gaqResolverDescriptions,
-        standardApolloResolvers,
+        logger: getTestLogger(),
       });
 
       expect(resolvers).toHaveProperty('Query');
       expect(resolvers.Query).toHaveProperty('bookGaqQueryResult');
-      expect(resolvers.Query).toHaveProperty('customQuery');
       expect(resolvers).toHaveProperty('Book');
       expect(resolvers).toHaveProperty('GaqNestedFilterQuery');
     });
@@ -262,7 +252,7 @@ describe('getResolversFromDescriptions', () => {
       const resolvers = generateResolvers({
         dbCollectionNameMap,
         gaqResolverDescriptions,
-        standardApolloResolvers: undefined,
+        logger: getTestLogger(),
       });
 
       expect(resolvers).toHaveProperty('Query');
@@ -295,7 +285,7 @@ describe('getResolversFromDescriptions', () => {
       const resolvers = generateResolvers({
         dbCollectionNameMap,
         gaqResolverDescriptions,
-        standardApolloResolvers: undefined,
+        logger: getTestLogger(),
       });
       expect(resolvers).toHaveProperty('Query');
       expect(resolvers.Query).toHaveProperty('bookGaqQueryResult');

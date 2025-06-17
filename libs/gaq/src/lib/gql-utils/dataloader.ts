@@ -5,7 +5,6 @@ import {
   GaqResolverDescription,
 } from '../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
-import { getLogger } from '../logger';
 import {
   DocumentNode,
   FieldNode,
@@ -108,16 +107,18 @@ export const createDataLoaderFactory = ({
   fieldResolver,
   dbCollectionNameMap,
   gaqDbClient,
+  logger,
 }: {
   requestedFields: string[];
   traceId: string;
   fieldResolver: GaqFieldResolverDescription;
   dbCollectionNameMap: Map<string, string>;
   gaqDbClient: GaqDbAdapter;
+  logger: GaqLogger;
 }) => {
   const batchFn = batchLoadFn({ requestedFields, traceId });
   return new DataLoader<any, any, any>(
-    batchFn(fieldResolver, dbCollectionNameMap, gaqDbClient, getLogger())
+    batchFn(fieldResolver, dbCollectionNameMap, gaqDbClient, logger)
   );
 };
 
@@ -165,6 +166,7 @@ export const analyzeQueryForDataloaders = (
     gaqResolverDescriptions: GaqResolverDescription[];
     dbCollectionNameMap: Map<string, string>;
     gaqDbClient: GaqDbAdapter;
+    logger: GaqLogger;
   }
 ): { gaqDataloaders: Map<string, DataLoader<any, any, any>> } => {
   const gaqDataloaders = new Map<string, DataLoader<any, any, any>>();
@@ -199,6 +201,7 @@ export const analyzeQueryForDataloaders = (
       fieldResolver,
       dbCollectionNameMap: opts.dbCollectionNameMap,
       gaqDbClient: opts.gaqDbClient,
+      logger: opts.logger,
     });
     const dataloaderName = `${resolverDescription.linkedType}${fieldResolver.fieldName}Dataloader`;
     gaqDataloaders.set(dataloaderName, dataloader);

@@ -1,4 +1,4 @@
-import { GaqFilterComparators, GaqServer, getGaqTools } from '@gaq';
+import { GaqFilterComparators, getGaqTools } from '@gaq';
 import { getMongoGaqDbConnector } from '@gaq/mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
@@ -6,9 +6,10 @@ import request from 'supertest';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { mergeSchemas } from '@graphql-tools/schema';
+import { getTestLogger } from '@gaq/mocks';
 
 describe('Testing Gaq With Mongo connector', () => {
-  let server: GaqServer;
+  let server: ApolloServer;
   let url: string;
   let mongoClient: MongoClient;
   beforeAll(async () => {
@@ -38,6 +39,7 @@ describe('Testing Gaq With Mongo connector', () => {
   
         `,
       dbAdapter,
+      logger: getTestLogger(),
     });
 
     const mergedSchema = mergeSchemas({
@@ -46,7 +48,7 @@ describe('Testing Gaq With Mongo connector', () => {
         DateTime: DateTimeResolver,
       },
     });
-    const server = new ApolloServer({
+    server = new ApolloServer({
       schema: mergedSchema,
     });
     ({ url } = await startStandaloneServer(server, {

@@ -43,14 +43,6 @@ export type GaqServerOptions = Prettify<
   Omit<ApolloServerOptions<GaqContext>, 'typeDefs' | 'resolvers' | 'schema'> &
     GaqOnlyServerOptions
 >;
-export type GaqServer<TContext extends GaqContext = GaqContext> =
-  ApolloServer<TContext> & {
-    startGraphQLAutoQueriesServer: (
-      options?: StartStandaloneServerOptions<TContext> & {
-        listen?: ListenOptions;
-      }
-    ) => Promise<{ url: string }>;
-  };
 
 export type GaqFieldResolverArguments = {
   parentKey: string;

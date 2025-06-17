@@ -1,5 +1,5 @@
 import winston = require('winston');
-import { GaqLogger } from '../interfaces/common.interfaces';
+import { GaqLogger } from './lib/interfaces/common.interfaces';
 
 export const getTestLogger = (): GaqLogger => {
   return winston.createLogger({

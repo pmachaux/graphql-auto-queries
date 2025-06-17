@@ -1,4 +1,3 @@
-import { GaqServer } from './interfaces/common.interfaces';
 import { getGaqTools } from './gaq';
 import { getMockedDatasource } from './test-utils/mocked-datasource';
 import {
@@ -13,12 +12,12 @@ import {
   SchemaMapper,
 } from '@graphql-tools/utils';
 import { defaultFieldResolver, GraphQLSchema } from 'graphql';
-import { getTestLogger } from './test-utils/test-logger';
+import { getTestLogger } from '../mocks';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 describe('gaq', () => {
   describe('basic features', () => {
-    let server: GaqServer;
+    let server: ApolloServer;
     let url: string;
     let bookSpy: jest.SpyInstance;
     let bookCountSpy: jest.SpyInstance;
@@ -54,7 +53,7 @@ describe('gaq', () => {
           bookCountSpy: bookCountSpy as any,
         }),
       });
-      const server = new ApolloServer({
+      server = new ApolloServer({
         schema,
       });
       ({ url } = await startStandaloneServer(server, {
@@ -286,7 +285,7 @@ describe('gaq', () => {
     });
   });
   describe('solving n+1 problem', () => {
-    let server: GaqServer;
+    let server: ApolloServer;
     let url: string;
     let bookSpy: jest.SpyInstance;
     let authorSpy: jest.SpyInstance;
@@ -325,7 +324,7 @@ describe('gaq', () => {
           reviewSpy: reviewSpy as any,
         }),
       });
-      const server = new ApolloServer({
+      server = new ApolloServer({
         schema,
       });
       ({ url } = await startStandaloneServer(server, {
@@ -454,7 +453,7 @@ describe('gaq', () => {
     });
   });
   describe('limit and maxLimit support', () => {
-    let server: GaqServer;
+    let server: ApolloServer;
     let bookSpy: jest.SpyInstance;
     let reviewSpy: jest.SpyInstance;
     let url: string;
@@ -483,7 +482,7 @@ describe('gaq', () => {
           reviewSpy: reviewSpy as any,
         }),
       });
-      const server = new ApolloServer({
+      server = new ApolloServer({
         schema,
       });
       ({ url } = await startStandaloneServer(server, {
@@ -577,7 +576,7 @@ describe('gaq', () => {
   });
 
   describe('schema transformation support', () => {
-    let protectedServer: GaqServer;
+    let protectedServer: ApolloServer;
     let urlProtectedServer: string;
     let getUserFn: jest.Mock;
     beforeAll(async () => {
@@ -638,15 +637,18 @@ describe('gaq', () => {
 
       const schemaWithAuth = authTransformer(schema);
 
-      const server = new ApolloServer({
+      protectedServer = new ApolloServer({
         schema: schemaWithAuth,
       });
-      ({ url: urlProtectedServer } = await startStandaloneServer(server, {
-        listen: { port: 0 },
-        context: async ({ req, res }) => {
-          return withGaqContextFn({ req, res });
-        },
-      }));
+      ({ url: urlProtectedServer } = await startStandaloneServer(
+        protectedServer,
+        {
+          listen: { port: 0 },
+          context: async ({ req, res }) => {
+            return withGaqContextFn({ req, res });
+          },
+        }
+      ));
     });
     afterAll(async () => {
       await protectedServer.stop();
@@ -761,31 +763,6 @@ describe('gaq', () => {
           },
         });
       });
-    });
-  });
-  describe('@gaqIgnore', () => {
-    let server: GaqServer;
-    let url: string;
-    beforeAll(async () => {
-      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
-        logger: getTestLogger(),
-        typeDefs: `
-          type Book @dbCollection(collectionName: "books") @gaqIgnore() {
-            id: ID
-            title: String
-          }
-        `,
-        dbAdapter: getMockedDatasource(),
-      });
-      const server = new ApolloServer({
-        schema,
-      });
-      ({ url } = await startStandaloneServer(server, {
-        listen: { port: 0 },
-      }));
-    });
-    afterAll(async () => {
-      await server.stop();
     });
   });
 });

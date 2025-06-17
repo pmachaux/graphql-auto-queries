@@ -3,13 +3,9 @@ import {
   getAutoSchemaAndResolvers,
   setDbCollectionNameMap,
 } from './schema-analyzer';
-import { getTestLogger } from '../test-utils/test-logger';
-import { setLogger } from '../logger';
+import { getTestLogger } from '../../mocks';
 
 describe('schema-analyzer', () => {
-  beforeAll(() => {
-    setLogger(getTestLogger());
-  });
   describe('getDbCollectionNameMap', () => {
     it('should extract collection names from type definitions', () => {
       const typeDefs = `
@@ -124,8 +120,10 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqSchema, gaqResolverDescriptions } =
-        getAutoSchemaAndResolvers(options);
+      const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
+        options,
+        { logger: getTestLogger() }
+      );
 
       expect(gaqResolverDescriptions).toEqual([
         {
@@ -170,7 +168,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
         resultType: 'BookGaqResult',
@@ -218,7 +218,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
         resultType: 'BookGaqResult',
@@ -266,7 +268,9 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
 
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
@@ -316,8 +320,10 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqSchema, gaqResolverDescriptions } =
-        getAutoSchemaAndResolvers(options);
+      const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
+        options,
+        { logger: getTestLogger() }
+      );
 
       expect(gaqResolverDescriptions).toEqual([]);
       expect(gaqSchema).toBe('');
@@ -337,9 +343,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      expect(() => getAutoSchemaAndResolvers(options)).toThrow(
-        '@dbCollection directive is required on type Book'
-      );
+      expect(() =>
+        getAutoSchemaAndResolvers(options, { logger: getTestLogger() })
+      ).toThrow('@dbCollection directive is required on type Book');
     });
 
     it('should throw error when @dbCollection directive is missing collectionName argument', () => {
@@ -355,7 +361,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      expect(() => getAutoSchemaAndResolvers(options)).toThrow(
+      expect(() =>
+        getAutoSchemaAndResolvers(options, { logger: getTestLogger() })
+      ).toThrow(
         'collectionName argument is required on directive @dbCollection on type Book'
       );
     });
@@ -377,9 +385,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      expect(() => getAutoSchemaAndResolvers(options)).toThrow(
-        'parentKey argument is required on directive @fieldResolver'
-      );
+      expect(() =>
+        getAutoSchemaAndResolvers(options, { logger: getTestLogger() })
+      ).toThrow('parentKey argument is required on directive @fieldResolver');
     });
 
     it('should handle non-nullable fields correctly', () => {
@@ -405,7 +413,9 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
 
       expect(gaqResolverDescriptions[0]).toEqual({
         queryName: 'bookGaqQueryResult',
@@ -457,7 +467,9 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
 
       expect(gaqResolverDescriptions).toHaveLength(2);
       expect(gaqResolverDescriptions[0].fieldResolvers).toHaveLength(1);
@@ -495,7 +507,9 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
       expect(gaqResolverDescriptions).toEqual([]);
     });
   });

@@ -18,8 +18,6 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Incoming features
 
-- Add directive @gaqIgnore to skip resolver creation for a particular type
-- Provide in functions parameters to support multiple instances
 - Ensure input types are ignore with testing
 - Federation support as subgraph
 - PostGres connector

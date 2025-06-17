@@ -18,7 +18,6 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Incoming features
 
-- Ensure input types are ignore with testing
 - Federation support as subgraph
 - PostGres connector
 

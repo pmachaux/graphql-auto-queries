@@ -512,5 +512,21 @@ describe('schema-analyzer', () => {
       });
       expect(gaqResolverDescriptions).toEqual([]);
     });
+    it('should ignore input types', () => {
+      const options = {
+        typeDefs: `
+        input BookInput {
+          title: String!
+        }
+      `,
+        dbAdapter: {
+          getCollectionAdapter: jest.fn(),
+        },
+      };
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+        logger: getTestLogger(),
+      });
+      expect(gaqResolverDescriptions).toEqual([]);
+    });
   });
 });

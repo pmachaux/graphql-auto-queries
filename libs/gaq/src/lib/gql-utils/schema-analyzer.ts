@@ -20,13 +20,10 @@ import {
   GaqServerOptions,
 } from '../interfaces/common.interfaces';
 import gql from 'graphql-tag';
-import { mergeTypeDefs } from '@graphql-tools/merge';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
-
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { getLogger } from '../logger';
-import { mapSchema } from '@graphql-tools/utils';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -44,6 +41,8 @@ directive @dbCollection(
 ) on OBJECT
 
 directive @limit(default: Int, max: Int) on OBJECT
+
+directive @gaqIgnore on OBJECT
 
 # End of Gaq custom directives
 
@@ -66,47 +65,6 @@ input GaqRootFiltersInput {
   sort: [GaqSortingParams]
 }
 `;
-
-/**
- * Extracts all type definitions from a GraphQL schema string and converts them into a detailed type definition format.
- *
- * This function parses a GraphQL schema string and extracts all object type definitions, excluding Query and Mutation types.
- * For each type, it processes its fields and their directives to create a detailed type definition that includes:
- * - Field types
- * - Array information
- * - Field resolver information (if @fieldResolver directive is present)
- *
- * @param schemaString - The GraphQL schema string to parse and analyze
- * @returns A record mapping type names to their detailed definitions, where each definition contains:
- *          - name: The type name
- *          - properties: A record of field definitions, each containing:
- *            - fieldResolver: Information about field resolution (if applicable)
- *            - isArray: Whether the field is an array type
- *            - type: The base type of the field
- *          - dbCollectionName: The database collection name (from @dbCollection directive)
- *
- * @example
- * ```typescript
- * const schema = `
- *   type Book @dbCollection(collectionName: "books") {
- *     title: String
- *     author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
- *   }
- * `;
- * const types = extractAllTypesDefinitionsFromSchema(schema);
- * // Returns:
- * // {
- * //   Book: {
- * //     title: { fieldResolver: null, isArray: false, type: "String" },
- * //     author: {
- * //       fieldResolver: { parentKey: "authorId", fieldKey: "id" },
- * //       isArray: false,
- * //       type: "Author"
- * //     }
- * //   }
- * // }
- * ```
- */
 
 function getDefaultAndMaxLimitFromDirective(def: ObjectTypeDefinitionNode): {
   defaultLimit: number | null;
@@ -181,14 +139,21 @@ function extractAllTypesDefinitionsFromSchema(
   const document = parse(schemaString);
   const typeDefinitions = getObjectTypesDefinitionsFromDocumentNode(document);
 
-  return typeDefinitions.map((def) => {
-    return {
-      name: def.name.value,
-      properties: extractDetailedGaqFieldDefinitions(def.fields),
-      ...getDbCollectionNameFromDirective(def),
-      ...getDefaultAndMaxLimitFromDirective(def),
-    };
-  });
+  return typeDefinitions
+    .filter(
+      (def) =>
+        !def.directives?.find(
+          (directive) => directive.name.value === 'gaqIgnore'
+        )
+    )
+    .map((def) => {
+      return {
+        name: def.name.value,
+        properties: extractDetailedGaqFieldDefinitions(def.fields),
+        ...getDbCollectionNameFromDirective(def),
+        ...getDefaultAndMaxLimitFromDirective(def),
+      };
+    });
 }
 
 function extractDetailedGaqFieldDefinitions(

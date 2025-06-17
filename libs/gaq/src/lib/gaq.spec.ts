@@ -16,8 +16,6 @@ import { defaultFieldResolver, GraphQLSchema } from 'graphql';
 import { getTestLogger } from './test-utils/test-logger';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { makeExecutableSchema, mergeSchemas } from '@graphql-tools/schema';
-import { mergeTypeDefs } from '@graphql-tools/merge';
 describe('gaq', () => {
   describe('basic features', () => {
     let server: GaqServer;
@@ -763,6 +761,31 @@ describe('gaq', () => {
           },
         });
       });
+    });
+  });
+  describe('@gaqIgnore', () => {
+    let server: GaqServer;
+    let url: string;
+    beforeAll(async () => {
+      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+        logger: getTestLogger(),
+        typeDefs: `
+          type Book @dbCollection(collectionName: "books") @gaqIgnore() {
+            id: ID
+            title: String
+          }
+        `,
+        dbAdapter: getMockedDatasource(),
+      });
+      const server = new ApolloServer({
+        schema,
+      });
+      ({ url } = await startStandaloneServer(server, {
+        listen: { port: 0 },
+      }));
+    });
+    afterAll(async () => {
+      await server.stop();
     });
   });
 });

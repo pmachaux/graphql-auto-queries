@@ -113,7 +113,7 @@ describe('schema-analyzer', () => {
   describe('getAutoSchemaAndResolvers', () => {
     it('should generate schema and resolvers from auto types', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") {
           title: String
           authorId: String
@@ -150,11 +150,11 @@ describe('schema-analyzer', () => {
         'bookGaqQueryResult(filters: GaqRootFiltersInput): BookGaqResult'
       );
 
-      expect(gaqSchema).toContain(options.autoTypes);
+      expect(gaqSchema).toContain(options.typeDefs);
     });
     it('should generate schema and resolvers from auto types with field resolvers', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") {
           title: String
           authorId: String
@@ -202,7 +202,7 @@ describe('schema-analyzer', () => {
     });
     it('should generate schema and resolvers from auto types with field resolvers and limit and maxLimit', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") @limit(default: 10, max: 100) {
           title: String
           authorId: String
@@ -250,7 +250,7 @@ describe('schema-analyzer', () => {
     });
     it('should generate schema and resolvers from auto types with field resolvers and array fields', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") {
           id: ID
           title: String
@@ -310,7 +310,7 @@ describe('schema-analyzer', () => {
 
     it('should handle empty auto types', () => {
       const options = {
-        autoTypes: '',
+        typeDefs: '',
         dbAdapter: {
           getCollectionAdapter: jest.fn(),
         },
@@ -326,7 +326,7 @@ describe('schema-analyzer', () => {
     // Additional test cases
     it('should throw error when @dbCollection directive is missing', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book {
           title: String
           authorId: String
@@ -344,7 +344,7 @@ describe('schema-analyzer', () => {
 
     it('should throw error when @dbCollection directive is missing collectionName argument', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection {
           title: String
           authorId: String
@@ -362,7 +362,7 @@ describe('schema-analyzer', () => {
 
     it('should throw error when @fieldResolver directive is missing required arguments', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") {
           title: String
           author: Author @fieldResolver
@@ -384,7 +384,7 @@ describe('schema-analyzer', () => {
 
     it('should handle non-nullable fields correctly', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") {
           id: ID!
           title: String!
@@ -439,7 +439,7 @@ describe('schema-analyzer', () => {
 
     it('should handle circular references between types', () => {
       const options = {
-        autoTypes: `
+        typeDefs: `
         type Book @dbCollection(collectionName: "books") {
           id: ID!
           title: String!
@@ -482,6 +482,21 @@ describe('schema-analyzer', () => {
         limit: null,
         dataloaderName: 'AuthorbooksDataloader',
       });
+    });
+    it('should handle @gaqIgnore directive and not generate resolvers for when directive is present', () => {
+      const options = {
+        typeDefs: `
+        type Book @dbCollection(collectionName: "books") @gaqIgnore {
+          id: ID!
+          title: String!
+        }
+      `,
+        dbAdapter: {
+          getCollectionAdapter: jest.fn(),
+        },
+      };
+      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options);
+      expect(gaqResolverDescriptions).toEqual([]);
     });
   });
 });

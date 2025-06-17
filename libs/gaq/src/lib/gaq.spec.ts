@@ -1,6 +1,7 @@
 import { getGaqTools } from './gaq';
 import { getMockedDatasource } from './test-utils/mocked-datasource';
 import {
+  GaqContext,
   GaqFilterComparators,
   GaqRootQueryFilter,
 } from './interfaces/common.interfaces';
@@ -15,16 +16,17 @@ import { defaultFieldResolver, GraphQLSchema } from 'graphql';
 import { getTestLogger } from '../mocks';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
+import { makeExecutableSchema } from '@graphql-tools/schema';
 describe('gaq', () => {
   describe('basic features', () => {
-    let server: ApolloServer;
+    let server: ApolloServer<GaqContext>;
     let url: string;
     let bookSpy: jest.SpyInstance;
     let bookCountSpy: jest.SpyInstance;
     beforeAll(async () => {
       bookSpy = jest.fn();
       bookCountSpy = jest.fn();
-      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+      const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         typeDefs: `
           type Book @dbCollection(collectionName: "books"){
@@ -53,8 +55,9 @@ describe('gaq', () => {
           bookCountSpy: bookCountSpy as any,
         }),
       });
-      server = new ApolloServer({
-        schema,
+      server = new ApolloServer<GaqContext>({
+        typeDefs,
+        resolvers,
       });
       ({ url } = await startStandaloneServer(server, {
         listen: { port: 0 },
@@ -285,7 +288,7 @@ describe('gaq', () => {
     });
   });
   describe('solving n+1 problem', () => {
-    let server: ApolloServer;
+    let server: ApolloServer<GaqContext>;
     let url: string;
     let bookSpy: jest.SpyInstance;
     let authorSpy: jest.SpyInstance;
@@ -294,7 +297,7 @@ describe('gaq', () => {
       bookSpy = jest.fn();
       authorSpy = jest.fn();
       reviewSpy = jest.fn();
-      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+      const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         typeDefs: `
           type Book @dbCollection(collectionName: "books"){
@@ -324,8 +327,9 @@ describe('gaq', () => {
           reviewSpy: reviewSpy as any,
         }),
       });
-      server = new ApolloServer({
-        schema,
+      server = new ApolloServer<GaqContext>({
+        typeDefs,
+        resolvers,
       });
       ({ url } = await startStandaloneServer(server, {
         listen: { port: 0 },
@@ -453,14 +457,14 @@ describe('gaq', () => {
     });
   });
   describe('limit and maxLimit support', () => {
-    let server: ApolloServer;
+    let server: ApolloServer<GaqContext>;
     let bookSpy: jest.SpyInstance;
     let reviewSpy: jest.SpyInstance;
     let url: string;
     beforeAll(async () => {
       bookSpy = jest.fn();
       reviewSpy = jest.fn();
-      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+      const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         typeDefs: `
           type Book @dbCollection(collectionName: "books") @limit(default: 1, max: 3){
@@ -482,8 +486,9 @@ describe('gaq', () => {
           reviewSpy: reviewSpy as any,
         }),
       });
-      server = new ApolloServer({
-        schema,
+      server = new ApolloServer<GaqContext>({
+        typeDefs,
+        resolvers,
       });
       ({ url } = await startStandaloneServer(server, {
         listen: { port: 0 },
@@ -576,11 +581,11 @@ describe('gaq', () => {
   });
 
   describe('schema transformation support', () => {
-    let protectedServer: ApolloServer;
+    let protectedServer: ApolloServer<GaqContext>;
     let urlProtectedServer: string;
     let getUserFn: jest.Mock;
     beforeAll(async () => {
-      const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+      const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         typeDefs: `
         directive @auth(
@@ -635,7 +640,12 @@ describe('gaq', () => {
         } satisfies SchemaMapper);
       };
 
-      const schemaWithAuth = authTransformer(schema);
+      const schemaWithAuth = authTransformer(
+        makeExecutableSchema({
+          typeDefs,
+          resolvers,
+        })
+      );
 
       protectedServer = new ApolloServer({
         schema: schemaWithAuth,

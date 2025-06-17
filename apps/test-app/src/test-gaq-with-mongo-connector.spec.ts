@@ -1,15 +1,14 @@
-import { GaqFilterComparators, getGaqTools } from '@gaq';
+import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
 import { getMongoGaqDbConnector } from '@gaq/mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
 import request from 'supertest';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { mergeSchemas } from '@graphql-tools/schema';
 import { getTestLogger } from '@gaq/mocks';
 
 describe('Testing Gaq With Mongo connector', () => {
-  let server: ApolloServer;
+  let server: ApolloServer<GaqContext>;
   let url: string;
   let mongoClient: MongoClient;
   beforeAll(async () => {
@@ -18,7 +17,7 @@ describe('Testing Gaq With Mongo connector', () => {
       dbName: 'sample_mflix',
     });
     mongoClient = client;
-    const { gqaSchema: schema, withGaqContextFn } = getGaqTools({
+    const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
       typeDefs: `
         scalar DateTime
           type Movie @dbCollection(collectionName: "movies"){
@@ -42,14 +41,12 @@ describe('Testing Gaq With Mongo connector', () => {
       logger: getTestLogger(),
     });
 
-    const mergedSchema = mergeSchemas({
-      schemas: [schema],
+    server = new ApolloServer<GaqContext>({
+      typeDefs,
       resolvers: {
         DateTime: DateTimeResolver,
+        ...resolvers,
       },
-    });
-    server = new ApolloServer({
-      schema: mergedSchema,
     });
     ({ url } = await startStandaloneServer(server, {
       listen: { port: 0 },

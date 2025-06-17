@@ -1,24 +1,30 @@
 import { GaqContext, GaqServerOptions } from './interfaces/common.interfaces';
-import { getMergedSchemaAndResolvers } from './gql-utils/schema-analyzer';
+import { getTypeDefsAndResolvers } from './gql-utils/schema-analyzer';
 import { getDefaultLogger } from './logger';
-import { GraphQLSchema, parse } from 'graphql';
+import { parse } from 'graphql';
 import { randomUUID } from 'crypto';
 import { analyzeQueryForDataloaders } from './gql-utils/dataloader';
+import { ApolloServerOptions } from '@apollo/server';
 
 type GqlContextFn = ({ req, res }: { req: any; res: any }) => Promise<any>;
 
 export function getGaqTools<TContext extends GaqContext>(
   config: GaqServerOptions
 ): {
-  gqaSchema: GraphQLSchema;
+  typeDefs: ApolloServerOptions<TContext>['typeDefs'];
+  resolvers: ApolloServerOptions<TContext>['resolvers'];
   withGaqContextFn: ({ req, res }: { req: any; res: any }) => Promise<TContext>;
 } {
   const logger = config.logger ?? getDefaultLogger();
 
   logger.info('Creating GraphQL Auto Queries Server...');
   try {
-    const { schema, gaqResolverDescriptions, dbCollectionNameMap } =
-      getMergedSchemaAndResolvers(config, { logger });
+    const {
+      typeDefs,
+      resolvers,
+      gaqResolverDescriptions,
+      dbCollectionNameMap,
+    } = getTypeDefsAndResolvers(config, { logger });
 
     const withGaqContextFn: GqlContextFn = async ({ req, res }) => {
       const ast = req.body.query ? parse(req.body.query) : null;
@@ -39,7 +45,8 @@ export function getGaqTools<TContext extends GaqContext>(
     };
 
     return {
-      gqaSchema: schema,
+      typeDefs,
+      resolvers,
       withGaqContextFn,
     };
   } catch (error) {

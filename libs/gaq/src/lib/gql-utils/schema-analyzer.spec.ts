@@ -1,6 +1,6 @@
 import gql from 'graphql-tag';
 import {
-  getAutoSchemaAndResolvers,
+  getGaqTypeDefsAndResolvers,
   setDbCollectionNameMap,
 } from './schema-analyzer';
 import { getTestLogger } from '../../mocks';
@@ -120,7 +120,7 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
+      const { typeDefs, gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(
         options,
         { logger: getTestLogger() }
       );
@@ -137,18 +137,18 @@ describe('schema-analyzer', () => {
         },
       ]);
 
-      expect(gaqSchema).toContain(`scalar GaqNestedFilterQuery`);
-      expect(gaqSchema).toContain(`type BookGaqResult {
+      expect(typeDefs).toContain(`scalar GaqNestedFilterQuery`);
+      expect(typeDefs).toContain(`type BookGaqResult {
         result: [Book]
         count: Int
       }`);
 
-      expect(gaqSchema).toContain('type Query {');
-      expect(gaqSchema).toContain(
+      expect(typeDefs).toContain('type Query {');
+      expect(typeDefs).toContain(
         'bookGaqQueryResult(filters: GaqRootFiltersInput): BookGaqResult'
       );
 
-      expect(gaqSchema).toContain(options.typeDefs);
+      expect(typeDefs).toContain(options.typeDefs);
     });
     it('should generate schema and resolvers from auto types with field resolvers', () => {
       const options = {
@@ -168,7 +168,7 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
       expect(gaqResolverDescriptions[0]).toEqual({
@@ -218,7 +218,7 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
       expect(gaqResolverDescriptions[0]).toEqual({
@@ -268,7 +268,7 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
 
@@ -320,13 +320,11 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-        options,
-        { logger: getTestLogger() }
-      );
+      const { typeDefs: typeDefs, gaqResolverDescriptions } =
+        getGaqTypeDefsAndResolvers(options, { logger: getTestLogger() });
 
       expect(gaqResolverDescriptions).toEqual([]);
-      expect(gaqSchema).toBe('');
+      expect(typeDefs).toBe('');
     });
 
     // Additional test cases
@@ -344,7 +342,7 @@ describe('schema-analyzer', () => {
       };
 
       expect(() =>
-        getAutoSchemaAndResolvers(options, { logger: getTestLogger() })
+        getGaqTypeDefsAndResolvers(options, { logger: getTestLogger() })
       ).toThrow('@dbCollection directive is required on type Book');
     });
 
@@ -362,7 +360,7 @@ describe('schema-analyzer', () => {
       };
 
       expect(() =>
-        getAutoSchemaAndResolvers(options, { logger: getTestLogger() })
+        getGaqTypeDefsAndResolvers(options, { logger: getTestLogger() })
       ).toThrow(
         'collectionName argument is required on directive @dbCollection on type Book'
       );
@@ -386,7 +384,7 @@ describe('schema-analyzer', () => {
       };
 
       expect(() =>
-        getAutoSchemaAndResolvers(options, { logger: getTestLogger() })
+        getGaqTypeDefsAndResolvers(options, { logger: getTestLogger() })
       ).toThrow('parentKey argument is required on directive @fieldResolver');
     });
 
@@ -413,7 +411,7 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
 
@@ -467,7 +465,7 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
 
@@ -507,7 +505,7 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
       expect(gaqResolverDescriptions).toEqual([]);
@@ -523,7 +521,7 @@ describe('schema-analyzer', () => {
           getCollectionAdapter: jest.fn(),
         },
       };
-      const { gaqResolverDescriptions } = getAutoSchemaAndResolvers(options, {
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
         logger: getTestLogger(),
       });
       expect(gaqResolverDescriptions).toEqual([]);

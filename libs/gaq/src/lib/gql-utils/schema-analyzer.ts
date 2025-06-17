@@ -23,7 +23,6 @@ import {
 import gql from 'graphql-tag';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
-import { makeExecutableSchema } from '@graphql-tools/schema';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -312,11 +311,11 @@ export const getAutoResolversAndDataloaders = (
   };
 };
 
-export const getAutoSchemaAndResolvers = (
+export const getGaqTypeDefsAndResolvers = (
   config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
   { logger }: { logger: GaqLogger }
 ): {
-  gaqSchema: string;
+  typeDefs: ApolloServerOptions<GaqContext>['typeDefs'];
   gaqResolverDescriptions: GaqResolverDescription[];
 } => {
   logger.debug('Building auto resolvers');
@@ -327,7 +326,7 @@ export const getAutoSchemaAndResolvers = (
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
     return {
-      gaqSchema: config.typeDefs,
+      typeDefs: config.typeDefs,
       gaqResolverDescriptions: [],
     };
   }
@@ -336,7 +335,7 @@ export const getAutoSchemaAndResolvers = (
   );
 
   logger.debug('Building auto schema');
-  const gaqSchema =
+  const typeDefs =
     gaqDefaultScalarsAndInputs +
     config.typeDefs +
     gaqResolverDescriptions
@@ -357,7 +356,7 @@ export const getAutoSchemaAndResolvers = (
   }`;
 
   logger.debug('Auto schema built');
-  return { gaqSchema, gaqResolverDescriptions };
+  return { typeDefs, gaqResolverDescriptions };
 };
 
 export const setDbCollectionNameMap = (
@@ -388,39 +387,31 @@ export const setDbCollectionNameMap = (
   return;
 };
 
-export const getMergedSchemaAndResolvers = <TContext extends GaqContext>(
+export const getTypeDefsAndResolvers = <TContext extends GaqContext>(
   config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
   { logger }: { logger: GaqLogger }
-): Pick<ApolloServerOptions<TContext>, 'schema'> & {
+): Pick<ApolloServerOptions<TContext>, 'typeDefs' | 'resolvers'> & {
   gaqResolverDescriptions: GaqResolverDescription[];
   dbCollectionNameMap: Map<string, string>;
 } => {
   const dbCollectionNameMap = new Map<string, string>();
-  const { gaqSchema, gaqResolverDescriptions } = getAutoSchemaAndResolvers(
-    config,
-    { logger }
-  );
-  const autoTypesDefs = gql`
+  const { typeDefs: gaqSchema, gaqResolverDescriptions } =
+    getGaqTypeDefsAndResolvers(config, { logger });
+  const typeDefs = gql`
     ${gaqSchema}
   `;
 
-  setDbCollectionNameMap(autoTypesDefs, dbCollectionNameMap);
-
-  logger.debug('Merged schema');
+  setDbCollectionNameMap(typeDefs, dbCollectionNameMap);
   const resolvers = generateResolvers({
     dbCollectionNameMap,
     gaqResolverDescriptions,
     logger,
   });
-  logger.debug('Auto resolvers built and merged with standard ones');
-
-  const executableSchema = makeExecutableSchema({
-    typeDefs: autoTypesDefs,
-    resolvers,
-  });
+  logger.debug('Built resolvers from type defs');
 
   return {
-    schema: executableSchema,
+    typeDefs,
+    resolvers,
     gaqResolverDescriptions,
     dbCollectionNameMap,
   };

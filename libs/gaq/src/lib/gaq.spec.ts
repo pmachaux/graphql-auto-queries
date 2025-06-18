@@ -791,7 +791,7 @@ describe('gaq', () => {
             url: "https://specs.apollo.dev/federation/v2.0"
             import: ["@key", "@shareable"]
           )
-          type Book @dbCollection(collectionName: "books") @key(fields: "id") @key(fields: "authorId"){
+          type Book @dbCollection(collectionName: "books") @key(fields: "id") @key(fields: "authorId") @key(fields: "id authorId"){
             id: ID
             title: String
             authorId: String
@@ -845,7 +845,18 @@ describe('gaq', () => {
         id: '1',
         title: 'The Great Gatsby',
       });
-    }, 30000);
+      // Check is tries to load with the proper filters and only the requested fields
+      expect(bookSpy.mock.calls[0][0]).toEqual({
+        or: [
+          {
+            and: [
+              { key: 'id', comparator: GaqFilterComparators.EQUAL, value: '1' },
+            ],
+          },
+        ],
+      });
+      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'title']);
+    });
     it('should be able to resolve book as a reference on the authorId key in a federation context', async () => {
       const representations = [{ __typename: 'Book', authorId: '2' }];
       const query = `
@@ -870,6 +881,73 @@ describe('gaq', () => {
         authorId: '2',
         title: 'To Kill a Mockingbird',
       });
+      expect(bookSpy.mock.calls[0][0]).toEqual({
+        or: [
+          {
+            and: [
+              {
+                key: 'authorId',
+                comparator: GaqFilterComparators.EQUAL,
+                value: '2',
+              },
+            ],
+          },
+        ],
+      });
+      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'authorId', 'title']);
+    });
+    it('should be able to resolve book as a reference on the id and authorId keys in a federation context', async () => {
+      const representations = [{ __typename: 'Book', id: '1', authorId: '1' }];
+      const query = `
+        query($representations: [_Any!]!) {
+          _entities(representations: $representations) {
+            ... on Book {
+              id
+              authorId
+              title
+            }
+          }
+        }
+      `;
+      const response = await request(url).post('/').send({
+        query,
+        variables: { representations },
+      });
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data._entities[0]).toEqual({
+        id: '1',
+        authorId: '1',
+        title: 'The Great Gatsby',
+      });
+    });
+    it('should be able to handle when requesting with multiple representations and keep the same order of the representations', async () => {
+      const representations = [
+        { __typename: 'Book', id: '1' },
+        { __typename: 'Book', id: '3' },
+        { __typename: 'Book', id: '2' },
+      ];
+      const query = `
+      query($representations: [_Any!]!) {
+        _entities(representations: $representations) {
+          ... on Book {
+            id
+            authorId
+            title
+          }
+        }
+      }
+    `;
+      const response = await request(url).post('/').send({
+        query,
+        variables: { representations },
+      });
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data._entities).toEqual([
+        { id: '1', authorId: '1', title: 'The Great Gatsby' },
+        { id: '3', authorId: '3', title: '1984' },
+        { id: '2', authorId: '2', title: 'To Kill a Mockingbird' },
+      ]);
     });
   });
 });

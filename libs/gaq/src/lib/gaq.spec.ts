@@ -290,6 +290,24 @@ describe('gaq', () => {
       expect(bookCountSpy).toHaveBeenCalledTimes(1);
       expect(bookSpy).not.toHaveBeenCalled();
     });
+    it('should be able to select all when no filters are passed', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            bookGaqQueryResult(filters: $filters, options: $options) {
+              result {
+                title
+                authorId
+              }
+            }
+          }`,
+        variables: {
+          filters: {},
+        },
+      };
+      await request(url).post('/').send(queryData);
+
+      expect(bookSpy.mock.calls[0][0]).toEqual({});
+    });
   });
   describe('solving n+1 problem', () => {
     let server: ApolloServer<GaqContext>;

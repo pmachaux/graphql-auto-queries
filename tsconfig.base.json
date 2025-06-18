@@ -17,7 +17,8 @@
     "paths": {
       "@gaq": ["libs/gaq/src/index.ts"],
       "@gaq/mocks": ["libs/gaq/src/mocks.ts"],
-      "@gaq/mongo": ["libs/db-connectors/mongo/src/index.ts"]
+      "@gaq/mongo": ["libs/db-connectors/mongo/src/index.ts"],
+      "@gaq/sql-converter": ["libs/db-connectors/sql-converter/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

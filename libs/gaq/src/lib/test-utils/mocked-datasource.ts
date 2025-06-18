@@ -5,6 +5,7 @@ import {
   GaqFilterQuery,
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
+import { isNullOrUndefinedOrEmptyObject } from '../utils';
 
 const books = [
   { id: '1', title: 'The Great Gatsby', authorId: '1' },
@@ -57,12 +58,14 @@ export const getMockedDatasource = (spies?: {
             opts: GaqDbQueryOptions
           ) => {
             spies?.bookSpy?.(filters, selectedFields, opts);
-            if ((filters as any).or) {
+            if (
+              isNullOrUndefinedOrEmptyObject(filters) ||
+              (filters as any).or ||
+              (filters as any).and.length === 0
+            ) {
               return books;
             }
-            if (filters.and.length === 0) {
-              return books;
-            }
+
             return books.filter((book) => {
               return (
                 book.title ===

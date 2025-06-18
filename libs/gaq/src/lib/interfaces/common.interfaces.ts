@@ -1,13 +1,9 @@
-import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
+import { BaseContext } from '@apollo/server';
 import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
 import {
-  IResolvers,
   ISchemaLevelResolver,
-  SchemaMapper,
 } from '@graphql-tools/utils';
-import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
-import { ListenOptions } from 'net';
-import { DocumentNode, GraphQLSchema } from 'graphql';
+import { DocumentNode } from 'graphql';
 import type DataLoader = require('dataloader');
 
 export interface GaqLogger {

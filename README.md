@@ -6,75 +6,109 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 
 ## Features
 
-- **Auto-generates GraphQL schema and resolvers** from your type definitions
+- **Auto-generates GraphQL queries and resolvers** from your type definitions
 - **Database-agnostic**: plug in your own database connector
 - **Advanced filtering and sorting** out of the box
-- **Customizable logging**
-- **Traceable logs**
+- **Customizable logging** with traceable logs.
 - **Extensible with Apollo Server options**
 - **Route guards, authorization, authentication**
-- **N+1 problem handled automatically with dataloaders**
-- **Optimized DB queries, automatically only request necessary fields and nothing more to increase performances and reduce read costs**
+- **N+1 problem handled** automatically with dataloaders
+- **Optimized DB queries**, automatically only request necessary fields and nothing more to increase performances and reduce read costs
+- **Native support for Apollo Federation** as a subgraph server
 
 ## Incoming features
 
-- Federation support as subgraph
-- Add support for passing documentNode as TypeDefs in the config and better return a documentNode too.
 - PostGres connector
 
 ## Usage Example
 
-Below is a minimal example of how to use `gaq` to create and start a GraphQL server:
+Below is a simple example on how to setup an Apollo server using GraphQL auto-queries.
+In this example, we will use the native MongoDB adapter provided by our library.
 
-```ts
-import { getGraphQLAutoQueriesServer, GaqServerOptions } from 'gaq';
+```
+import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
+import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { MongoClient } from 'mongodb';
+import { DateTimeResolver } from 'graphql-scalars';
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
 
-const options: GaqServerOptions = {
-  autoTypes: `
-    type Book @dbCollection(collectionName: "books") {
-      id: ID!
-      title: String
-      author: String
-    }
-  `,
-  dbConnector: {
-    connect: async () => {
-      /* Your connexion logic */
-      return {
-        collection: (name) => ({
-            /* Adapter to the collection*/
-            return {
-                getFromGaqFilters: async () => [
-                     { id: '1', title: 'GAQ Book', author: 'AI' },
-                ],
-                 getByField: async () => [
-                     { id: '1', title: 'GAQ Book', author: 'AI' },
-                ],
-            }
-        }),
-      };
-    },
-  },
-};
 
-const server = getGraphQLAutoQueriesServer(options);
-server
-  .startGraphQLAutoQueriesServer({ listen: { port: 4000 } })
-  .then(({ url }) => {
-    console.log(`🚀 Server ready at ${url}`);
-  });
+const { client, dbAdapter } = await getMongoGaqDbConnector({
+      uri: process.env.MONGO_URI,
+      dbName: 'sample_mflix',
+    });
+    mongoClient = client;
+const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
+      typeDefs: `
+        scalar DateTime
+          type Movie @dbCollection(collectionName: "movies"){
+            _id: ID
+            title: String
+            year: Int
+            released: DateTime
+            comments: [Comment] @fieldResolver(parentKey: "_id", fieldKey: "movie_id")
+          }
+
+          type Comment @dbCollection(collectionName: "comments"){
+            _id: ID
+            name: String
+            movie_id: String
+            movie: Movie @fieldResolver(parentKey: "movie_id", fieldKey: "_id")
+            date: DateTime
+          }
+        `,
+      dbAdapter,
+    });
+
+server = new ApolloServer<GaqContext>({
+      typeDefs,
+      resolvers: {
+        DateTime: DateTimeResolver,
+        ...resolvers,
+      },
+    });
+startStandaloneServer(server, {
+      listen: { port: 0 },
+      context: async ({ req, res }) => {
+        return withGaqContextFn({ req, res });
+      },
+    });
 ```
 
-See how to make a query at [Filtering & Querying](#filtering--querying)
+Now let's see how to query that:
 
-## API Highlights
+```
+const queryData = {
+      query: `query($filters: GaqRootFiltersInput) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                title
+                year
+                comments {
+                  name
+                  date
+                }
+              }
+              count
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'title',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'The Four Horsemen of the Apocalypse',
+            },
+          ],
+        },
+      },
+    };
+```
 
-### Main Entry Point
-
-- `getGraphQLAutoQueriesServer<TContext>(config: GaqServerOptions): GaqServer<TContext>`
-  - Creates an Apollo Server instance with auto-generated schema and resolvers.
-
-### Filtering & Querying
+## Filtering & Querying
 
 Supports advanced query filters and comparators (e.g., `EQUAL`, `IN`, `ARRAY_CONTAINS`, etc.) for flexible data access.
 Supported filter operations are:

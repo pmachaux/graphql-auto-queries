@@ -51,15 +51,12 @@ const matchingFnForReferenceResolution = <T extends object = object>(
   sourceRecords: readonly Record<string, string>[]
 ): Array<T | null> => {
   return sourceRecords.map((sourceRecord) => {
-    return (
-      queryResults.find((r: T) => {
-        return resolverDescription.federationReferenceResolver.keys.every(
-          (key) => {
-            return r[key] === sourceRecord[key];
-          }
-        );
-      }) ?? null
-    );
+    const matchingRecord = queryResults.find((r: T) => {
+      return Object.keys(sourceRecord).every((key) => {
+        return r[key] === sourceRecord[key];
+      });
+    });
+    return matchingRecord ?? null;
   });
 };
 

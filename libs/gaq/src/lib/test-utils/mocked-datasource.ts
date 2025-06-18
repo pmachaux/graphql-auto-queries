@@ -57,11 +57,8 @@ export const getMockedDatasource = (spies?: {
             opts: GaqDbQueryOptions
           ) => {
             spies?.bookSpy?.(filters, selectedFields, opts);
-            if ((filters as any).or[0]?.and[0]?.value === '1') {
-              return books[1];
-            }
-            if ((filters as any).or[0]?.and[0]?.value === '2') {
-              return books[2];
+            if ((filters as any).or) {
+              return books;
             }
             if (filters.and.length === 0) {
               return books;

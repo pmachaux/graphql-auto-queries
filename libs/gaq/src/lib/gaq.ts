@@ -1,18 +1,19 @@
 import { GaqContext, GaqServerOptions } from './interfaces/common.interfaces';
 import { getTypeDefsAndResolvers } from './gql-utils/schema-analyzer';
 import { getDefaultLogger } from './logger';
-import { parse } from 'graphql';
+import { DocumentNode, parse } from 'graphql';
 import { randomUUID } from 'crypto';
 import { analyzeQueryForDataloaders } from './gql-utils/dataloader';
-import { ApolloServerOptions } from '@apollo/server';
+import {} from '@apollo/server';
+import type { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 
 type GqlContextFn = ({ req, res }: { req: any; res: any }) => Promise<any>;
 
 export function getGaqTools<TContext extends GaqContext>(
   config: GaqServerOptions
 ): {
-  typeDefs: ApolloServerOptions<TContext>['typeDefs'];
-  resolvers: ApolloServerOptions<TContext>['resolvers'];
+  typeDefs: DocumentNode;
+  resolvers: GraphQLResolverMap<TContext>;
   withGaqContextFn: ({ req, res }: { req: any; res: any }) => Promise<TContext>;
 } {
   const logger = config.logger ?? getDefaultLogger();

@@ -19,6 +19,7 @@ Compared to classical REST APIs, it's meant to shift the intention from 'actions
 ## Incoming features
 
 - Federation support as subgraph
+- Add support for passing documentNode as TypeDefs in the config and better return a documentNode too.
 - PostGres connector
 
 ## Usage Example

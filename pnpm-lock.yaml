@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@apollo/server':
-        specifier: ^4.12.1
+        specifier: ^4.12.2
         version: 4.12.2(graphql@16.11.0)
       '@apollo/subgraph':
-        specifier: ^2.10.2
-        version: 2.10.2(graphql@16.11.0)
+        specifier: ^2.11.0
+        version: 2.11.0(graphql@16.11.0)
       '@graphql-tools/merge':
         specifier: ^9.0.24
         version: 9.0.24(graphql@16.11.0)
@@ -156,8 +156,8 @@ packages:
     peerDependencies:
       graphql: 14.x || 15.x || 16.x
 
-  '@apollo/federation-internals@2.10.2':
-    resolution: {integrity: sha512-6GLJsFizf8J5GJUSgXmW7zzwhwSELB/X0OGkqW3x+s7M9s1VFO15jvaqwI0Pk4OAzuDxVjO4EGaPJ7MqKafAtQ==}
+  '@apollo/federation-internals@2.11.0':
+    resolution: {integrity: sha512-5kmXR2AnSN1ywP2QNkLGF8KA0p9HuvGKxbfv2nApy6TnSd3eSpCFKjceWXgwB6s6CFFRQBqL6tviFCTMXUWCRw==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
@@ -177,8 +177,8 @@ packages:
     peerDependencies:
       graphql: ^16.6.0
 
-  '@apollo/subgraph@2.10.2':
-    resolution: {integrity: sha512-823Xc8r2bTDSj8/J8/Zt9qpVnU9ahmE9xapvcZnYPCbu5wrsseRjH8UHBdStqDKNgHZU0w9BxoI3T4spjdrCtg==}
+  '@apollo/subgraph@2.11.0':
+    resolution: {integrity: sha512-6Y1UP71vHgLC2tSl2DPh4klz3CllKI6PWmmYb/783aC9HOwugBnuDHeyRlkhDtSRazzFEtiTUIfaSSdIBNkSJg==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
@@ -4257,7 +4257,7 @@ snapshots:
     dependencies:
       graphql: 16.11.0
 
-  '@apollo/federation-internals@2.10.2(graphql@16.11.0)':
+  '@apollo/federation-internals@2.11.0(graphql@16.11.0)':
     dependencies:
       '@types/uuid': 9.0.8
       chalk: 4.1.2
@@ -4319,10 +4319,10 @@ snapshots:
       - encoding
       - supports-color
 
-  '@apollo/subgraph@2.10.2(graphql@16.11.0)':
+  '@apollo/subgraph@2.11.0(graphql@16.11.0)':
     dependencies:
       '@apollo/cache-control-types': 1.0.3(graphql@16.11.0)
-      '@apollo/federation-internals': 2.10.2(graphql@16.11.0)
+      '@apollo/federation-internals': 2.11.0(graphql@16.11.0)
       graphql: 16.11.0
 
   '@apollo/usage-reporting-protobuf@4.1.1':

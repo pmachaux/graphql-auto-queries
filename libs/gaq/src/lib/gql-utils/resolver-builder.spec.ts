@@ -68,11 +68,9 @@ describe('getResolversFromDescriptions', () => {
       traceId: 'test',
     };
 
-    const resolvers = getResolversFromDescriptions(
-      mockDescriptions,
-      dbCollectionNameMap,
-      { logger: getTestLogger() }
-    );
+    const resolvers = getResolversFromDescriptions(mockDescriptions, {
+      logger: getTestLogger(),
+    });
     expect(resolvers).toHaveProperty('Query');
     expect(resolvers.Query).toHaveProperty('bookGaqQueryResult');
 
@@ -148,11 +146,9 @@ describe('getResolversFromDescriptions', () => {
       traceId: 'test',
     };
 
-    const resolvers = getResolversFromDescriptions(
-      mockDescriptions,
-      dbCollectionNameMap,
-      { logger: getTestLogger() }
-    );
+    const resolvers = getResolversFromDescriptions(mockDescriptions, {
+      logger: getTestLogger(),
+    });
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(
       { someData: 'test' },
@@ -185,11 +181,9 @@ describe('getResolversFromDescriptions', () => {
       traceId: 'test',
     };
 
-    const resolvers = getResolversFromDescriptions(
-      mockDescriptions,
-      dbCollectionNameMap,
-      { logger: getTestLogger() }
-    );
+    const resolvers = getResolversFromDescriptions(mockDescriptions, {
+      logger: getTestLogger(),
+    });
     const userResolver = resolvers.Query.userGaqQueryResult;
     const result = userResolver(
       null,
@@ -229,7 +223,6 @@ describe('getResolversFromDescriptions', () => {
       ];
 
       const resolvers = generateResolvers({
-        dbCollectionNameMap,
         gaqResolverDescriptions,
         logger: getTestLogger(),
       });
@@ -255,7 +248,6 @@ describe('getResolversFromDescriptions', () => {
       ];
 
       const resolvers = generateResolvers({
-        dbCollectionNameMap,
         gaqResolverDescriptions,
         logger: getTestLogger(),
       });
@@ -289,7 +281,6 @@ describe('getResolversFromDescriptions', () => {
         },
       ];
       const resolvers = generateResolvers({
-        dbCollectionNameMap,
         gaqResolverDescriptions,
         logger: getTestLogger(),
       });

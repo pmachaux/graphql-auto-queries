@@ -17,6 +17,8 @@ import { getTestLogger } from '../mocks';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { buildSubgraphSchema } from '@apollo/subgraph';
+import gql from 'graphql-tag';
 describe('gaq', () => {
   describe('basic features', () => {
     let server: ApolloServer<GaqContext>;
@@ -772,6 +774,101 @@ describe('gaq', () => {
             name: 'F. Scott Fitzgerald',
           },
         });
+      });
+    });
+  });
+  describe('resolve reference in federation context', () => {
+    let server: ApolloServer<GaqContext>;
+    let bookSpy: jest.SpyInstance;
+    let url: string;
+    beforeAll(async () => {
+      bookSpy = jest.fn();
+      const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
+        logger: getTestLogger(),
+        typeDefs: `
+          extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.0"
+            import: ["@key", "@shareable"]
+          )
+          type Book @dbCollection(collectionName: "books") @key(fields: "id") @key(fields: "authorId"){
+            id: ID
+            title: String
+            authorId: String
+          }
+        `,
+        dbAdapter: getMockedDatasource({
+          bookSpy: bookSpy as any,
+        }),
+      });
+      const typeDefsNode = gql`
+        ${typeDefs}
+      `;
+      server = new ApolloServer<GaqContext>({
+        schema: buildSubgraphSchema({
+          typeDefs: typeDefsNode,
+          resolvers,
+        }),
+      });
+      ({ url } = await startStandaloneServer(server, {
+        listen: { port: 0 },
+        context: async ({ req, res }) => {
+          return withGaqContextFn({ req, res });
+        },
+      }));
+    });
+    beforeEach(() => {
+      bookSpy.mockClear();
+    });
+    afterAll(async () => {
+      await server.stop();
+    });
+    it('should be able to resolve book as a reference on the id key in a federation context', async () => {
+      const representations = [{ __typename: 'Book', id: '1' }];
+      const query = `
+        query($representations: [_Any!]!) {
+          _entities(representations: $representations) {
+            ... on Book {
+              id
+              title
+            }
+          }
+        }
+      `;
+      const response = await request(url).post('/').send({
+        query,
+        variables: { representations },
+      });
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data._entities[0]).toEqual({
+        id: '1',
+        title: 'The Great Gatsby',
+      });
+    }, 30000);
+    it('should be able to resolve book as a reference on the authorId key in a federation context', async () => {
+      const representations = [{ __typename: 'Book', authorId: '2' }];
+      const query = `
+        query($representations: [_Any!]!) {
+          _entities(representations: $representations) {
+            ... on Book {
+              id
+              authorId
+              title
+            }
+          }
+        }
+      `;
+      const response = await request(url).post('/').send({
+        query,
+        variables: { representations },
+      });
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data._entities[0]).toEqual({
+        id: '2',
+        authorId: '2',
+        title: 'To Kill a Mockingbird',
       });
     });
   });

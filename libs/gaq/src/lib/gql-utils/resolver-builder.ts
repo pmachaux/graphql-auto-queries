@@ -6,7 +6,11 @@ import type {
   GaqRootQueryFilter,
   GaqSchemaLevelResolver,
 } from '../interfaces/common.interfaces';
-import { isNullOrUndefinedOrEmptyObject, omit } from '../utils';
+import {
+  isNullOrUndefinedOrEmptyObject,
+  omit,
+  pickNonNullable,
+} from '../utils';
 import { GaqErrorCodes } from '../interfaces/gaq-errors.interface';
 import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
 import graphqlFields = require('graphql-fields');
@@ -142,9 +146,85 @@ const getFieldResolver = (
   return fieldResolver;
 };
 
-const getQueryAndFieldResolver = (
+const getReferenceResolver = (
   resolverDescription: GaqResolverDescription,
-  dbCollectionNameMap: Map<string, string>,
+  { logger }: { logger: GaqLogger }
+) => {
+  const referenceResolver = (
+    entity: any,
+    contextValue: GaqContext,
+    info: any
+  ) => {
+    logger.debug(
+      `[${contextValue.traceId}] Getting reference resolver for ${resolverDescription.linkedType}`
+    );
+
+    const dataloader = contextValue.gaqDataloaders.get(
+      resolverDescription.federationReferenceResolver.dataloaderName
+    );
+    if (!dataloader) {
+      logger.error(
+        `[${contextValue.traceId}] Dataloader ${resolverDescription.federationReferenceResolver.dataloaderName} not found`
+      );
+      throw new Error(
+        `Dataloader ${resolverDescription.federationReferenceResolver.dataloaderName} not found`
+      );
+    }
+    const keys = pickNonNullable(
+      entity,
+      ...resolverDescription.federationReferenceResolver.keys
+    );
+    return dataloader
+      .load(keys)
+      .then((data) => {
+        logger.debug(
+          `[${contextValue.traceId}] Reference resolver data for ${resolverDescription.linkedType} fetched, returning ${data.length} items`
+        );
+        return data;
+      })
+      .catch((error) => {
+        logger.error(
+          `[${contextValue.traceId}] Error fetching reference resolver data for ${resolverDescription.linkedType}: ${error}`
+        );
+        throw new Error(GaqErrorCodes.INTERNAL_SERVER_ERROR);
+      });
+  };
+
+  return referenceResolver;
+};
+
+const getFieldResoverForLinkedType = (
+  resolverDescription: GaqResolverDescription,
+  { logger }: { logger: GaqLogger }
+) => {
+  const fieldResolversForLinkedType: Record<string, GaqSchemaLevelResolver> =
+    {};
+  resolverDescription.fieldResolvers.forEach((fieldResolver) => {
+    fieldResolversForLinkedType[fieldResolver.fieldName] = getFieldResolver(
+      fieldResolver,
+      { logger }
+    );
+  });
+  return fieldResolversForLinkedType;
+};
+
+const getReferenceResolverForLinkedType = (
+  resolverDescription: GaqResolverDescription,
+  { logger }: { logger: GaqLogger }
+) => {
+  if (!resolverDescription.federationReferenceResolver) {
+    return {};
+  }
+  const referenceResolver = getReferenceResolver(resolverDescription, {
+    logger,
+  });
+  return {
+    __resolveReference: referenceResolver,
+  };
+};
+
+const getQueryFieldAndReferenceResolver = (
+  resolverDescription: GaqResolverDescription,
   { logger }: { logger: GaqLogger }
 ) => {
   const queryResolver = {
@@ -160,28 +240,31 @@ const getQueryAndFieldResolver = (
   };
 
   const fieldResolversForLinkedType: Record<string, GaqSchemaLevelResolver> =
-    {};
-  resolverDescription.fieldResolvers.forEach((fieldResolver) => {
-    const dbCollectionName = dbCollectionNameMap.get(fieldResolver.fieldType);
-    if (!dbCollectionName) {
-      throw new Error(
-        `No db collection name found for type ${fieldResolver.fieldType}`
-      );
-    }
-    fieldResolversForLinkedType[fieldResolver.fieldName] = getFieldResolver(
-      fieldResolver,
-      { logger }
-    );
-  });
-  if (isNullOrUndefinedOrEmptyObject(fieldResolversForLinkedType)) {
+    getFieldResoverForLinkedType(resolverDescription, {
+      logger,
+    });
+
+  const referenceResolversForLinkedType = getReferenceResolverForLinkedType(
+    resolverDescription,
+    { logger }
+  );
+
+  if (
+    isNullOrUndefinedOrEmptyObject(fieldResolversForLinkedType) &&
+    isNullOrUndefinedOrEmptyObject(referenceResolversForLinkedType)
+  ) {
     return {
       queryResolver,
     };
   }
+
   return {
     queryResolver,
-    fieldResolvers: {
-      [resolverDescription.linkedType]: fieldResolversForLinkedType,
+    typeResolvers: {
+      [resolverDescription.linkedType]: {
+        ...fieldResolversForLinkedType,
+        ...referenceResolversForLinkedType,
+      },
     },
   };
 };
@@ -191,11 +274,12 @@ type GetResolversFromDescriptionsOutput = {
 } & Record<string, Record<string, GaqSchemaLevelResolver>>;
 export const getResolversFromDescriptions = (
   gaqResolverDescriptions: GaqResolverDescription[],
-  dbCollectionNameMap: Map<string, string>,
   { logger }: { logger: GaqLogger }
 ): GetResolversFromDescriptionsOutput => {
   const resolvers = gaqResolverDescriptions.map((description) =>
-    getQueryAndFieldResolver(description, dbCollectionNameMap, { logger })
+    getQueryFieldAndReferenceResolver(description, {
+      logger,
+    })
   );
 
   return resolvers.reduce<GetResolversFromDescriptionsOutput>(
@@ -205,7 +289,7 @@ export const getResolversFromDescriptions = (
         ...resolver.queryResolver,
       };
 
-      if (isNullOrUndefinedOrEmptyObject(resolver.fieldResolvers)) {
+      if (isNullOrUndefinedOrEmptyObject(resolver.typeResolvers)) {
         return {
           ...acc,
           Query,
@@ -214,7 +298,7 @@ export const getResolversFromDescriptions = (
       return {
         ...acc,
         Query,
-        ...resolver.fieldResolvers,
+        ...resolver.typeResolvers,
       };
     },
     { Query: {} }
@@ -223,18 +307,14 @@ export const getResolversFromDescriptions = (
 
 export const generateResolvers = ({
   gaqResolverDescriptions,
-  dbCollectionNameMap,
   logger,
 }: {
-  dbCollectionNameMap: Map<string, string>;
   gaqResolverDescriptions: GaqResolverDescription[];
   logger: GaqLogger;
 }) => {
-  const gaqResolvers = getResolversFromDescriptions(
-    gaqResolverDescriptions,
-    dbCollectionNameMap,
-    { logger }
-  );
+  const gaqResolvers = getResolversFromDescriptions(gaqResolverDescriptions, {
+    logger,
+  });
 
   const resolvers = {
     GaqNestedFilterQuery: gaqNestedFilterQueryScalar,

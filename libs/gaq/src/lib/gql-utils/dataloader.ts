@@ -1,8 +1,11 @@
 import {
   GaqDbAdapter,
   GaqFieldResolverDescription,
+  GaqFilterComparators,
+  GaqFilterQuery,
   GaqLogger,
   GaqResolverDescription,
+  GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
 import {
@@ -10,6 +13,7 @@ import {
   FieldNode,
   Kind,
   OperationDefinitionNode,
+  SelectionNode,
 } from 'graphql';
 
 const matchingFnForArrays = <T extends object = object>(
@@ -41,7 +45,25 @@ const matchingFnForEntity = <T extends object = object>(
   });
 };
 
-export const batchLoadFn =
+const matchingFnForReferenceResolution = <T extends object = object>(
+  resolverDescription: GaqResolverDescription,
+  queryResults: T[],
+  sourceRecords: readonly Record<string, string>[]
+): Array<T | null> => {
+  return sourceRecords.map((sourceRecord) => {
+    return (
+      queryResults.find((r: T) => {
+        return resolverDescription.federationReferenceResolver.keys.every(
+          (key) => {
+            return r[key] === sourceRecord[key];
+          }
+        );
+      }) ?? null
+    );
+  });
+};
+
+export const batchLoadFnForFieldResolution =
   ({
     requestedFields,
     traceId,
@@ -101,7 +123,7 @@ export const batchLoadFn =
     };
   };
 
-export const createDataLoaderFactory = ({
+export const createFieldDataLoaderFactory = ({
   requestedFields,
   traceId,
   fieldResolver,
@@ -116,9 +138,114 @@ export const createDataLoaderFactory = ({
   gaqDbClient: GaqDbAdapter;
   logger: GaqLogger;
 }) => {
-  const batchFn = batchLoadFn({ requestedFields, traceId });
+  const batchFn = batchLoadFnForFieldResolution({ requestedFields, traceId });
   return new DataLoader<any, any, any>(
     batchFn(fieldResolver, dbCollectionNameMap, gaqDbClient, logger)
+  );
+};
+
+export const batchLoadFnForReferenceResolution =
+  ({
+    requestedFields,
+    traceId,
+  }: {
+    requestedFields: string[];
+    traceId: string;
+  }) =>
+  <T extends object = object>(
+    resolverDescription: GaqResolverDescription,
+    dbCollectionNameMap: Map<string, string>,
+    gaqDbClient: GaqDbAdapter,
+    logger: GaqLogger
+  ): DataLoader.BatchLoadFn<Record<string, string>, T | T[] | null> => {
+    return async (
+      keyRecords: readonly Record<string, string>[]
+    ): Promise<T[] | T[][]> => {
+      const dbCollectionName = dbCollectionNameMap.get(
+        resolverDescription.linkedType
+      );
+      logger.debug(
+        `[${traceId}][${resolverDescription.federationReferenceResolver.dataloaderName}] Getting data from ${dbCollectionName} for values ${keyRecords} with dataloader`
+      );
+      const collectionClient =
+        gaqDbClient.getCollectionAdapter(dbCollectionName);
+      if (!collectionClient) {
+        logger.warn(
+          `[${traceId}][${resolverDescription.federationReferenceResolver.dataloaderName}] No collection client found for ${dbCollectionName}`
+        );
+        return new Array(keyRecords.length).fill(null);
+      }
+      const filters = keyRecords.map((record) => {
+        return {
+          and: [
+            ...Object.keys(record).map((key) => {
+              return {
+                key,
+                comparator: GaqFilterComparators.EQUAL,
+                value: record[key],
+              } satisfies GaqFilterQuery<object>;
+            }),
+          ],
+        } satisfies GaqRootQueryFilter<object>;
+      });
+      try {
+        const values = await collectionClient.getFromGaqFilters(
+          {
+            or: filters,
+          },
+          requestedFields,
+          {
+            logger,
+            traceId,
+          }
+        );
+        logger.debug(
+          `[${traceId}][${resolverDescription.federationReferenceResolver.dataloaderName}] Found ${values.length} values for ${dbCollectionName}`
+        );
+        return matchingFnForReferenceResolution(
+          resolverDescription,
+          values,
+          keyRecords
+        );
+      } catch (error) {
+        logger.error(
+          `[${traceId}][${
+            resolverDescription.federationReferenceResolver.dataloaderName
+          }] Error getting reference data from ${dbCollectionName} for keys ${JSON.stringify(
+            keyRecords
+          )}`
+        );
+        logger.error(
+          `[${traceId}][${
+            resolverDescription.federationReferenceResolver.dataloaderName
+          }]: ${JSON.stringify(error)}`
+        );
+        return new Array(keyRecords.length).fill(null);
+      }
+    };
+  };
+
+export const createrReferenceDataLoaderFactory = ({
+  requestedFields,
+  traceId,
+  resolverDescription,
+  dbCollectionNameMap,
+  gaqDbClient,
+  logger,
+}: {
+  requestedFields: string[];
+  traceId: string;
+  resolverDescription: GaqResolverDescription;
+  dbCollectionNameMap: Map<string, string>;
+  gaqDbClient: GaqDbAdapter;
+  logger: GaqLogger;
+}) => {
+  const batchFn = batchLoadFnForReferenceResolution({
+    requestedFields,
+    traceId,
+  });
+  return new DataLoader<any, any, any>(
+    batchFn(resolverDescription, dbCollectionNameMap, gaqDbClient, logger)
   );
 };
 
@@ -159,7 +286,7 @@ const findRequestedFieldsForDataloaderFromQueryDefinition = (
   return requestedFields;
 };
 
-export const analyzeQueryForDataloaders = (
+const getFieldDataloadersMap = (
   ast: DocumentNode,
   opts: {
     traceId: string;
@@ -168,30 +295,30 @@ export const analyzeQueryForDataloaders = (
     gaqDbClient: GaqDbAdapter;
     logger: GaqLogger;
   }
-): { gaqDataloaders: Map<string, DataLoader<any, any, any>> } => {
-  const gaqDataloaders = new Map<string, DataLoader<any, any, any>>();
+): { fieldDataloaders: Map<string, DataLoader<any, any, any>> } => {
+  const fieldDataloaders = new Map<string, DataLoader<any, any, any>>();
 
   const queryDefinition = ast.definitions.find(
     (def) => def.kind === Kind.OPERATION_DEFINITION && def.operation === 'query'
   );
   if (!queryDefinition || queryDefinition.kind !== Kind.OPERATION_DEFINITION) {
-    return { gaqDataloaders };
+    return { fieldDataloaders };
   }
 
   const queryName = (queryDefinition.selectionSet.selections[0] as FieldNode)
     ?.name?.value;
   if (!queryName) {
-    return { gaqDataloaders };
+    return { fieldDataloaders };
   }
   const resolverDescription = opts.gaqResolverDescriptions.find(
     (resolver) => resolver.queryName === queryName
   );
   if (!resolverDescription) {
-    return { gaqDataloaders };
+    return { fieldDataloaders };
   }
 
   resolverDescription.fieldResolvers.forEach((fieldResolver) => {
-    const dataloader = createDataLoaderFactory({
+    const dataloader = createFieldDataLoaderFactory({
       requestedFields: findRequestedFieldsForDataloaderFromQueryDefinition(
         queryDefinition,
         resolverDescription,
@@ -204,8 +331,105 @@ export const analyzeQueryForDataloaders = (
       logger: opts.logger,
     });
     const dataloaderName = `${resolverDescription.linkedType}${fieldResolver.fieldName}Dataloader`;
-    gaqDataloaders.set(dataloaderName, dataloader);
+    fieldDataloaders.set(dataloaderName, dataloader);
   });
 
-  return { gaqDataloaders };
+  return { fieldDataloaders: fieldDataloaders };
+};
+
+function getEntitiesRequestedTypesAndFields(ast: DocumentNode): {
+  type: string;
+  fields: string[];
+}[] {
+  // Find the operation definition (query)
+  const op = ast.definitions.find(
+    (def): def is OperationDefinitionNode =>
+      def.kind === Kind.OPERATION_DEFINITION && def.operation === 'query'
+  );
+  if (!op) return [];
+
+  // Find the _entities field in the selection set
+  const entitiesField = op.selectionSet.selections.find(
+    (sel): sel is any =>
+      sel.kind === Kind.FIELD && sel.name.value === '_entities'
+  );
+  if (!entitiesField || !entitiesField.selectionSet) return [];
+
+  // For each inline fragment (e.g., ... on Book), extract type and fields
+  return entitiesField.selectionSet.selections
+    .filter((sel): sel is any => sel.kind === Kind.INLINE_FRAGMENT)
+    .map((frag) => ({
+      type: frag.typeCondition.name.value,
+      fields: frag.selectionSet.selections
+        .filter((s: SelectionNode) => s.kind === Kind.FIELD)
+        .map((s: any) => s.name.value),
+    }));
+}
+
+export const getReferenceDataloadersMap = (
+  ast: DocumentNode,
+  opts: {
+    traceId: string;
+    gaqResolverDescriptions: GaqResolverDescription[];
+    dbCollectionNameMap: Map<string, string>;
+    gaqDbClient: GaqDbAdapter;
+    logger: GaqLogger;
+  }
+): {
+  referenceDataloadersMap: Map<string, DataLoader<any, any, any>>;
+} => {
+  const referenceDataloadersMap = new Map<string, DataLoader<any, any, any>>();
+
+  const entitiesRequestedTypesAndFields =
+    getEntitiesRequestedTypesAndFields(ast);
+
+  entitiesRequestedTypesAndFields.forEach(({ type, fields }) => {
+    const resolverDescription = opts.gaqResolverDescriptions.find(
+      (resolver) => resolver.linkedType === type
+    );
+    if (!resolverDescription) {
+      return;
+    }
+    const dataloader = createrReferenceDataLoaderFactory({
+      requestedFields: fields,
+      traceId: opts.traceId,
+      resolverDescription,
+      dbCollectionNameMap: opts.dbCollectionNameMap,
+      gaqDbClient: opts.gaqDbClient,
+      logger: opts.logger,
+    });
+    const dataloaderName = `${resolverDescription.linkedType}federationReferenceDataloader`;
+    referenceDataloadersMap.set(dataloaderName, dataloader);
+  });
+  return { referenceDataloadersMap };
+};
+
+export const analyzeQueryForDataloaders = (
+  ast: DocumentNode,
+  opts: {
+    traceId: string;
+    gaqResolverDescriptions: GaqResolverDescription[];
+    dbCollectionNameMap: Map<string, string>;
+    gaqDbClient: GaqDbAdapter;
+    logger: GaqLogger;
+  }
+): { gaqDataloaders: Map<string, DataLoader<any, any, any>> } => {
+  const fieldDataloadersMap = getFieldDataloadersMap(ast, opts);
+  const referenceDataloadersMap = getReferenceDataloadersMap(ast, opts);
+
+  const gaqDataloaders = new Map<string, DataLoader<any, any, any>>();
+
+  // Merge field dataloaders
+  fieldDataloadersMap.fieldDataloaders.forEach((dataloader, key) => {
+    gaqDataloaders.set(key, dataloader);
+  });
+
+  // Merge reference dataloaders
+  referenceDataloadersMap.referenceDataloadersMap.forEach((dataloader, key) => {
+    gaqDataloaders.set(key, dataloader);
+  });
+
+  return {
+    gaqDataloaders,
+  };
 };

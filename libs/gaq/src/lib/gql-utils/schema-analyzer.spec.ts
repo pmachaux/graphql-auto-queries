@@ -4,6 +4,8 @@ import {
   setDbCollectionNameMap,
 } from './schema-analyzer';
 import { getTestLogger } from '../../mocks';
+import { DocumentNode, Kind } from 'graphql';
+import { print } from 'graphql';
 
 describe('schema-analyzer', () => {
   describe('getDbCollectionNameMap', () => {
@@ -138,18 +140,16 @@ describe('schema-analyzer', () => {
         },
       ]);
 
-      expect(typeDefs).toContain(`scalar GaqNestedFilterQuery`);
-      expect(typeDefs).toContain(`type BookGaqResult {
-        result: [Book]
-        count: Int
-      }`);
+      expect(print(typeDefs)).toContain(`scalar GaqNestedFilterQuery`);
+      expect(print(typeDefs)).toContain(`type BookGaqResult {
+  result: [Book]
+  count: Int
+}`);
 
-      expect(typeDefs).toContain('type Query {');
-      expect(typeDefs).toContain(
+      expect(print(typeDefs)).toContain('type Query {');
+      expect(print(typeDefs)).toContain(
         'bookGaqQueryResult(filters: GaqRootFiltersInput): BookGaqResult'
       );
-
-      expect(typeDefs).toContain(options.typeDefs);
     });
     it('should generate schema and resolvers from auto types with field resolvers', () => {
       const options = {
@@ -319,7 +319,7 @@ describe('schema-analyzer', () => {
       });
     });
 
-    it('should handle empty auto types', () => {
+    it('should handle empty typeDefs', () => {
       const options = {
         typeDefs: '',
         dbAdapter: {
@@ -327,11 +327,11 @@ describe('schema-analyzer', () => {
         },
       };
 
-      const { typeDefs: typeDefs, gaqResolverDescriptions } =
-        getGaqTypeDefsAndResolvers(options, { logger: getTestLogger() });
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
+        logger: getTestLogger(),
+      });
 
       expect(gaqResolverDescriptions).toEqual([]);
-      expect(typeDefs).toBe('');
     });
 
     // Additional test cases

@@ -7,7 +7,7 @@ import {
 } from '@graphql-tools/utils';
 import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
 import { ListenOptions } from 'net';
-import { GraphQLSchema } from 'graphql';
+import { DocumentNode, GraphQLSchema } from 'graphql';
 import type DataLoader = require('dataloader');
 
 export interface GaqLogger {
@@ -33,16 +33,11 @@ export interface GaqContext extends BaseContext {
  * @property {SchemaMapper} [schemaMapper] - (Optional) schema mapper used for transformations with graphql-tools library. See https://the-guild.dev/graphql/tools/docs/schema-directives#enforcing-access-permissions
  */
 
-export type GaqOnlyServerOptions = {
-  typeDefs: string;
+export type GaqServerOptions = {
+  typeDefs: string | DocumentNode;
   dbAdapter: GaqDbAdapter;
   logger?: GaqLogger;
 };
-
-export type GaqServerOptions = Prettify<
-  Omit<ApolloServerOptions<GaqContext>, 'typeDefs' | 'resolvers' | 'schema'> &
-    GaqOnlyServerOptions
->;
 
 export type GaqFieldResolverArguments = {
   parentKey: string;

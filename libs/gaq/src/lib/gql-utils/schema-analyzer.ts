@@ -23,6 +23,7 @@ import {
 import gql from 'graphql-tag';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
+import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -159,13 +160,14 @@ function getFederationKeysFromDirective(def: ObjectTypeDefinitionNode): {
 }
 
 function extractAllTypesDefinitionsFromSchema(
-  schemaString: string
+  typeDefs: string | DocumentNode
 ): DetailedGaqTypeDefinition[] {
-  if (!schemaString) {
+  if (!typeDefs) {
     return [];
   }
   // Parse the schema string into a DocumentNode
-  const document = parse(schemaString);
+
+  const document = typeof typeDefs === 'string' ? parse(typeDefs) : typeDefs;
   const typeDefinitions = getObjectTypesDefinitionsFromDocumentNode(document);
 
   return typeDefinitions
@@ -309,11 +311,11 @@ const getFieldResolversFromProperties = (
 };
 
 export const getAutoResolversAndDataloaders = (
-  autoTypes: string
+  typeDefs: string | DocumentNode
 ): {
   gaqResolverDescriptions: GaqResolverDescription[];
 } => {
-  const typeDefinitions = extractAllTypesDefinitionsFromSchema(autoTypes);
+  const typeDefinitions = extractAllTypesDefinitionsFromSchema(typeDefs);
 
   const gaqResolverDescriptions = typeDefinitions.map((typeDefinition) => {
     const propertiesToResolve = Object.entries(typeDefinition.properties)
@@ -353,7 +355,7 @@ export const getGaqTypeDefsAndResolvers = (
   config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
   { logger }: { logger: GaqLogger }
 ): {
-  typeDefs: ApolloServerOptions<GaqContext>['typeDefs'];
+  typeDefs: DocumentNode;
   gaqResolverDescriptions: GaqResolverDescription[];
 } => {
   logger.debug('Building auto resolvers');
@@ -364,7 +366,7 @@ export const getGaqTypeDefsAndResolvers = (
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
     return {
-      typeDefs: config.typeDefs,
+      typeDefs: parse(gaqDefaultScalarsAndInputs + config.typeDefs),
       gaqResolverDescriptions: [],
     };
   }
@@ -394,7 +396,7 @@ export const getGaqTypeDefsAndResolvers = (
   }`;
 
   logger.debug('Auto schema built');
-  return { typeDefs, gaqResolverDescriptions };
+  return { typeDefs: parse(typeDefs), gaqResolverDescriptions };
 };
 
 export const setDbCollectionNameMap = (
@@ -428,23 +430,23 @@ export const setDbCollectionNameMap = (
 export const getTypeDefsAndResolvers = <TContext extends GaqContext>(
   config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
   { logger }: { logger: GaqLogger }
-): Pick<ApolloServerOptions<TContext>, 'typeDefs' | 'resolvers'> & {
+): {
+  typeDefs: DocumentNode;
+  resolvers: GraphQLResolverMap<TContext>;
   gaqResolverDescriptions: GaqResolverDescription[];
   dbCollectionNameMap: Map<string, string>;
 } => {
   const dbCollectionNameMap = new Map<string, string>();
-  const { typeDefs: gaqSchema, gaqResolverDescriptions } =
-    getGaqTypeDefsAndResolvers(config, { logger });
-  const typeDefs = gql`
-    ${gaqSchema}
-  `;
+  const { typeDefs, gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(
+    config,
+    { logger }
+  );
 
   setDbCollectionNameMap(typeDefs, dbCollectionNameMap);
   const resolvers = generateResolvers({
-    dbCollectionNameMap,
     gaqResolverDescriptions,
     logger,
-  });
+  }) satisfies ApolloServerOptions<GaqContext>['resolvers'];
   logger.debug('Built resolvers from type defs');
 
   return {

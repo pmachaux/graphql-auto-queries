@@ -18,6 +18,18 @@ export const pick = <T extends object, K extends keyof T>(
   }, {} as Pick<T, K>);
 };
 
+export const pickNonNullable = <T extends object, K extends keyof T>(
+  source: T,
+  ...keys: K[]
+): Pick<T, K> => {
+  return keys.reduce((acc, key) => {
+    if (source[key] !== null && source[key] !== undefined) {
+      return { ...acc, [key]: source[key] };
+    }
+    return acc;
+  }, {} as Pick<T, K>);
+};
+
 export const isNullOrUndefinedOrEmptyObject = (
   obj: object | null | undefined
 ): boolean => {

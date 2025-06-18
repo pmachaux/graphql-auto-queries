@@ -120,9 +120,6 @@ export const validate = (
     GAQ_ROOT_QUERY_FILTER_CONDITION.AND,
     GAQ_ROOT_QUERY_FILTER_CONDITION.OR,
     GAQ_ROOT_QUERY_FILTER_CONDITION.NOR,
-    'limit',
-    'offset',
-    'sort',
     'arrayElementCondition',
   ];
 
@@ -148,19 +145,6 @@ export const validate = (
   } else {
     /* When input is of type GaqRootQueryFilter or GaqAndOrNorFilter*/
     for (const [key, filterValues] of Object.entries(o8RootQueryFilter)) {
-      if (key === 'limit') {
-        validateLimit(filterValues, ast);
-        continue;
-      }
-      if (key === 'offset') {
-        validateOffset(filterValues, ast);
-        continue;
-      }
-      if (key === 'sort') {
-        validateSorting(filterValues, ast);
-        continue;
-      }
-
       if (!Array.isArray(filterValues)) {
         throw createGraphQLError(`Expecting an array for key ${key}`, {
           nodes: ast,

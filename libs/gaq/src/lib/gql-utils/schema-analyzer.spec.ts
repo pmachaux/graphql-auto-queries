@@ -148,7 +148,7 @@ describe('schema-analyzer', () => {
 
       expect(print(typeDefs)).toContain('type Query {');
       expect(print(typeDefs)).toContain(
-        'bookGaqQueryResult(filters: GaqRootFiltersInput): BookGaqResult'
+        'bookGaqQueryResult(filters: GaqRootFiltersInput!, options: GaqQueryOptions): BookGaqResult'
       );
     });
     it('should generate schema and resolvers from auto types with field resolvers', () => {

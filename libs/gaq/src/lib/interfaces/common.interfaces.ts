@@ -99,7 +99,7 @@ export type GaqSchemaLevelResolver<TParent extends object = object> =
   ISchemaLevelResolver<
     TParent,
     GaqContext,
-    { filters: GaqRootQueryFilter<TParent> },
+    { filters: GaqRootQueryFilter<TParent>; options?: GaqQueryOptions },
     any
   >;
 
@@ -353,12 +353,14 @@ export type GaqAndOrNorFilter<T extends object> = Prettify<{
 }>;
 
 export type GaqRootQueryFilter<T extends object> = Prettify<
-  GaqAndOrNorFilter<T> & {
-    limit?: number;
-    sort?: GaqSortingParam[];
-    offset?: number;
-  }
+  GaqAndOrNorFilter<T>
 >;
+
+export interface GaqQueryOptions {
+  limit?: number;
+  sort?: GaqSortingParam[];
+  offset?: number;
+}
 
 /* Examples for query filters
 

@@ -2,6 +2,7 @@ import type {
   GaqContext,
   GaqFieldResolverDescription,
   GaqLogger,
+  GaqQueryOptions,
   GaqResolverDescription,
   GaqRootQueryFilter,
   GaqSchemaLevelResolver,
@@ -26,7 +27,10 @@ const getStandardResolver = (
 ): GaqSchemaLevelResolver => {
   const standardResolver: GaqSchemaLevelResolver = (
     parent: any,
-    args: { filters: GaqRootQueryFilter<any> },
+    {
+      filters,
+      options,
+    }: { filters: GaqRootQueryFilter<any>; options?: GaqQueryOptions },
     contextValue: GaqContext,
     info: any
   ) => {
@@ -61,27 +65,23 @@ const getStandardResolver = (
       `[${contextValue.traceId}] Getting data from collection ${config.dbCollectionName}`
     );
     if (selectedFields.length === 0) {
-      return collectionClient.count(args.filters).then((count) => ({
+      return collectionClient.count(filters).then((count) => ({
         count,
       }));
     }
-    let limit = args.filters.limit ?? config.defaultLimit;
+    let limit = options?.limit ?? config.defaultLimit;
     if (limit && config.maxLimit && limit > config.maxLimit) {
       limit = config.maxLimit;
     }
 
     return collectionClient
-      .getFromGaqFilters(
-        omit(args.filters, 'sort', 'limit', 'offset'),
-        selectedFields,
-        {
-          logger,
-          sort: args.filters.sort,
-          limit,
-          offset: args.filters.offset,
-          traceId: contextValue.traceId,
-        }
-      )
+      .getFromGaqFilters(filters, selectedFields, {
+        logger,
+        sort: options?.sort,
+        limit,
+        offset: options?.offset,
+        traceId: contextValue.traceId,
+      })
       .then((data) => {
         logger.debug(
           `[${contextValue.traceId}] Data for ${config.linkedType} fetched, returning ${data.length} items`

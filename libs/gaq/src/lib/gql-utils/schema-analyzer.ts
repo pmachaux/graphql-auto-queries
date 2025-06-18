@@ -20,7 +20,6 @@ import {
   GaqResolverDescription,
   GaqServerOptions,
 } from '../interfaces/common.interfaces';
-import gql from 'graphql-tag';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
 import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
@@ -28,6 +27,7 @@ import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
 scalar GaqNestedFilterQuery
+# End of Gaq custom scalars
 
 # Gaq custom directives
 directive @fieldResolver (
@@ -46,6 +46,8 @@ directive @gaqIgnore on OBJECT
 
 # End of Gaq custom directives
 
+# Gaq custom inputs
+
 input GaqSortingParams {
   "Must a field or nested field of the object queried. In case of nested field, use dot notation."
   key: String!
@@ -53,17 +55,22 @@ input GaqSortingParams {
   order: Int!
 }
 
-input GaqRootFiltersInput {
-  and: [GaqNestedFilterQuery]
-  or: [GaqNestedFilterQuery]
-  nor: [GaqNestedFilterQuery]
-  "Offset to start the query from. If not there, default offset is 0."
-  offset: Int
+input GaqQueryOptions {
   "Limit the number of results. Is applied after offset"
   limit: Int
   "Order of sorting parameters matters. The first sorting parameter will be the primary sort key."
   sort: [GaqSortingParams]
+  "Offset to start the query from. If not there, default offset is 0."
+  offset: Int
 }
+
+input GaqRootFiltersInput {
+  and: [GaqNestedFilterQuery]
+  or: [GaqNestedFilterQuery]
+  nor: [GaqNestedFilterQuery]
+}
+  
+# End of Gaq custom inputs
 `;
 
 function getDefaultAndMaxLimitFromDirective(def: ObjectTypeDefinitionNode): {
@@ -390,7 +397,7 @@ export const getGaqTypeDefsAndResolvers = (
     ${gaqResolverDescriptions
       .map(
         (resolver) =>
-          `${resolver.queryName}(filters: GaqRootFiltersInput): ${resolver.resultType}`
+          `${resolver.queryName}(filters: GaqRootFiltersInput!, options: GaqQueryOptions): ${resolver.resultType}`
       )
       .join('\n')}
   }`;

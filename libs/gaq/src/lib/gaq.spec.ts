@@ -78,8 +78,8 @@ describe('gaq', () => {
     });
     it('should return books when querying bookGaqQueryResult', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
-            bookGaqQueryResult(filters: $filters) {
+        query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            bookGaqQueryResult(filters: $filters, options: $options) {
               result {
                 title
                 authorId
@@ -140,7 +140,7 @@ describe('gaq', () => {
     });
     it('should be able to retun the author name when querying bookGaqQueryResult', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               result {
                 title
@@ -178,7 +178,7 @@ describe('gaq', () => {
     });
     it('should be able to resolve fields that are arrays', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               result {
                 title
@@ -215,8 +215,8 @@ describe('gaq', () => {
     });
     it('should request to the db provider only the selected fields in the query and nothing more', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
-            bookGaqQueryResult(filters: $filters) {
+        query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            bookGaqQueryResult(filters: $filters, options: $options) {
               result {
                 title
                 authorId
@@ -232,13 +232,15 @@ describe('gaq', () => {
                 value: 'The Great Gatsby',
               },
             ],
-            limit: 1,
-            offset: 0,
-            sort: [{ key: 'title', order: 1 }],
           } satisfies GaqRootQueryFilter<{
             title: string;
             author: string;
           }>,
+          options: {
+            limit: 1,
+            offset: 0,
+            sort: [{ key: 'title', order: 1 }],
+          },
         },
       };
       await request(url).post('/').send(queryData);
@@ -261,7 +263,7 @@ describe('gaq', () => {
     });
     it('should call the count method only if no fields are selected', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               count
             }
@@ -357,7 +359,7 @@ describe('gaq', () => {
     });
     it('should resolve fields by calling the field resolver only once', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               result {
                 id
@@ -392,7 +394,7 @@ describe('gaq', () => {
     });
     it('should not keep the cache after the request is done and recall the datasources on a new query', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               result {
                 id
@@ -427,7 +429,7 @@ describe('gaq', () => {
     });
     it('should call the the field resolver in the dataloader with only the selected fields and the field key even if not requested', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               result {
                 id
@@ -508,7 +510,7 @@ describe('gaq', () => {
     });
     it('should call the db provider and pass the default limit if no limit is passed', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             bookGaqQueryResult(filters: $filters) {
               result {
                 id
@@ -534,8 +536,8 @@ describe('gaq', () => {
     });
     it('should call the db provider and pass the max limit if the limit is passed and is greater than the max limit', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
-            bookGaqQueryResult(filters: $filters) {
+        query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            bookGaqQueryResult(filters: $filters, options: $options) {
               result {
                 id
                 title
@@ -549,6 +551,8 @@ describe('gaq', () => {
         variables: {
           filters: {
             and: [],
+          },
+          options: {
             limit: 10,
           },
         },
@@ -561,7 +565,7 @@ describe('gaq', () => {
     });
     it('should call the db provider and NOT pass a limit if the directive is not present', async () => {
       const queryData = {
-        query: `query($filters: GaqRootFiltersInput) {
+        query: `query($filters: GaqRootFiltersInput!) {
             reviewGaqQueryResult(filters: $filters) {
               result {
                   id
@@ -669,7 +673,7 @@ describe('gaq', () => {
       it('should prevent the user from querying Book if he does not have the role user', async () => {
         getUserFn = jest.fn().mockReturnValue({ roles: [] });
         const queryData = {
-          query: `query($filters: GaqRootFiltersInput) {
+          query: `query($filters: GaqRootFiltersInput!) {
               bookGaqQueryResult(filters: $filters) {
                 result {
                   title
@@ -700,7 +704,7 @@ describe('gaq', () => {
       it('should prevent the user from querying the protected if he does not have the proper roles', async () => {
         getUserFn = jest.fn().mockReturnValue({ roles: ['user'] });
         const queryData = {
-          query: `query($filters: GaqRootFiltersInput) {
+          query: `query($filters: GaqRootFiltersInput!) {
               bookGaqQueryResult(filters: $filters) {
                 result {
                   title
@@ -737,7 +741,7 @@ describe('gaq', () => {
           .fn()
           .mockReturnValue({ roles: ['paidUser', 'user', 'admin'] });
         const queryData = {
-          query: `query($filters: GaqRootFiltersInput) {
+          query: `query($filters: GaqRootFiltersInput!) {
               bookGaqQueryResult(filters: $filters) {
                 result {
                   title

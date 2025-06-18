@@ -19,17 +19,11 @@ jest.mock('graphql-fields', () =>
   })
 );
 describe('getResolversFromDescriptions', () => {
-  let dbCollectionNameMap: Map<string, string>;
   let gaqDataloaders: Map<string, DataLoader<any, any, any>>;
   let BookauthorDataloader: jest.Mock;
   let BookreviewsDataloader: jest.Mock;
 
   beforeEach(() => {
-    dbCollectionNameMap = new Map([
-      ['Book', 'books'],
-      ['Author', 'authors'],
-      ['Review', 'reviews'],
-    ]);
     BookauthorDataloader = jest.fn();
     BookreviewsDataloader = jest.fn();
 
@@ -87,6 +81,8 @@ describe('getResolversFromDescriptions', () => {
               value: 'The Great Gatsby',
             },
           ],
+        },
+        options: {
           limit: 10,
           offset: 0,
           sort: [

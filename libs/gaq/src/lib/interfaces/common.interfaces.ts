@@ -1,8 +1,6 @@
 import { BaseContext } from '@apollo/server';
 import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
-import {
-  ISchemaLevelResolver,
-} from '@graphql-tools/utils';
+import { ISchemaLevelResolver } from '@graphql-tools/utils';
 import { DocumentNode } from 'graphql';
 import type DataLoader = require('dataloader');
 
@@ -151,8 +149,6 @@ export enum GaqFilterComparators {
   ARRAY_CONTAINS = 'array-contains',
   ARRAY_CONTAINS_ANY = 'array-contains-any',
   ARRAY_ELEMENT_MATCH = 'array-element-match',
-  EXISTS = 'exists',
-  NOT_EXISTS = 'not-exists',
 }
 
 /*

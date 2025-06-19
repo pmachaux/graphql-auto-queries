@@ -123,11 +123,9 @@ enum GaqFilterComparators {
   STRICTLY_LOWER = '<',
   IN = 'in',
   NOT_IN = 'not-in',
-  ARRAY_CONTAINS = 'array-contains',
-  ARRAY_CONTAINS_ANY = 'array-contains-any',
-  ARRAY_ELEMENT_MATCH = 'array-element-match',
-  EXISTS = 'exists',
-  NOT_EXISTS = 'not-exists',
+  ARRAY_CONTAINS = 'array-contains', // Not natively supported in SQL
+  ARRAY_CONTAINS_ANY = 'array-contains-any', // Not natively supported in SQL
+  ARRAY_ELEMENT_MATCH = 'array-element-match', // Not natively supported in SQL
 }
 ```
 

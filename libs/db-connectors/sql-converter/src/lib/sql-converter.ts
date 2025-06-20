@@ -7,15 +7,25 @@ import {
 import { isNullOrUndefinedOrEmptyObject } from './utils';
 import { GaqSqlConverter } from './interface';
 
-export class SqlConverter<T extends object> implements GaqSqlConverter<T> {
-  constructor(protected readonly table: string) {}
+const isFilterQuery = (
+  filter: any
+): filter is GaqFilterQuery<object, keyof object & string> => {
+  return 'key' in filter;
+};
 
-  public convert(
-    filters: GaqRootQueryFilter<T>,
-    selectedFields: string[],
-    opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>
-  ): [string, any[]] {
-    let sql = `SELECT ${selectedFields.join(', ')} FROM ${this.table}`;
+export class SqlConverter implements GaqSqlConverter {
+  public convert({
+    filters,
+    table,
+    selectedFields,
+    opts,
+  }: {
+    filters: GaqRootQueryFilter<object>;
+    table: string;
+    selectedFields: string[];
+    opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>;
+  }): [string, any[]] {
+    let sql = `SELECT ${selectedFields.join(', ')} FROM ${table}`;
     let params: any[] = [];
     if (!isNullOrUndefinedOrEmptyObject(filters)) {
       const [whereSql, whereParams] = this.getWhereClause(filters);
@@ -37,7 +47,9 @@ export class SqlConverter<T extends object> implements GaqSqlConverter<T> {
     return [sql, params];
   }
 
-  protected getWhereClause(filters: GaqRootQueryFilter<T>): [string, any[]] {
+  protected getWhereClause(
+    filters: GaqRootQueryFilter<object>
+  ): [string, any[]] {
     let whereSql = '';
     const whereParams: any[] = [];
     if (filters.and) {
@@ -65,32 +77,14 @@ export class SqlConverter<T extends object> implements GaqSqlConverter<T> {
       const conditionParams = [];
       const sqlCondition = key === 'and' ? 'AND' : 'OR';
       filters[key].forEach((filter, index) => {
-        const filterQuery = filter as GaqFilterQuery<T, keyof T & string>;
-        if (filterQuery.key) {
-          const sqlComparator = this.getComparatorSql(filterQuery.comparator);
-          if (Array.isArray(filterQuery.value)) {
-            const values = filterQuery.value.map(() => '?').join(', ');
-            conditionSql +=
-              index === 0
-                ? ` (${filterQuery.key} ${sqlComparator} (${values})`
-                : ` ${sqlCondition} ${filterQuery.key} ${sqlComparator} (${values})`;
-            conditionParams.push(...filterQuery.value);
-          } else if (filterQuery.value === null) {
-            const sqlNull =
-              filterQuery.comparator === GaqFilterComparators.EQUAL
-                ? 'IS NULL'
-                : 'IS NOT NULL';
-            conditionSql +=
-              index === 0
-                ? ` (${filterQuery.key} ${sqlNull}`
-                : ` ${sqlCondition} ${filterQuery.key} ${sqlNull}`;
-          } else {
-            conditionSql +=
-              index === 0
-                ? ` (${filterQuery.key} ${sqlComparator} ?`
-                : ` ${sqlCondition} ${filterQuery.key} ${sqlComparator} ?`;
-            conditionParams.push(filterQuery.value);
-          }
+        if (isFilterQuery(filter)) {
+          const [sql, params] = this.getSqlForFilterQuery(
+            filter,
+            index,
+            sqlCondition
+          );
+          conditionSql += sql;
+          conditionParams.push(...params);
         } else {
           const [nestedSql, nestedParams] = this.getWhereClause(
             filter as GaqRootQueryFilter<object>
@@ -127,5 +121,55 @@ export class SqlConverter<T extends object> implements GaqSqlConverter<T> {
       default:
         throw new Error(`Unsupported comparator: ${comparator}`);
     }
+  }
+
+  protected getSqlForFilterQuery(
+    filter: GaqFilterQuery<object, keyof object & string>,
+    index: number,
+    sqlCondition: 'AND' | 'OR'
+  ): [string, any[]] {
+    let conditionSql = '';
+    const conditionParams = [];
+    const sqlComparator = this.getComparatorSql(filter.comparator);
+    if (Array.isArray(filter.value)) {
+      const values = filter.value.map(() => '?').join(', ');
+      conditionSql +=
+        index === 0
+          ? ` (${filter.key} ${sqlComparator} (${values})`
+          : ` ${sqlCondition} ${filter.key} ${sqlComparator} (${values})`;
+      conditionParams.push(...filter.value);
+    } else if (filter.value === null) {
+      conditionSql += this.getSqlOnNullValue({
+        comparator: filter.comparator,
+        filterQuery: filter,
+        index,
+        sqlCondition,
+      });
+    } else {
+      conditionSql +=
+        index === 0
+          ? ` (${filter.key} ${sqlComparator} ?`
+          : ` ${sqlCondition} ${filter.key} ${sqlComparator} ?`;
+      conditionParams.push(filter.value);
+    }
+    return [conditionSql, conditionParams];
+  }
+
+  protected getSqlOnNullValue({
+    comparator,
+    filterQuery,
+    index,
+    sqlCondition,
+  }: {
+    comparator: GaqFilterComparators;
+    filterQuery: GaqFilterQuery<object, keyof object & string>;
+    index: number;
+    sqlCondition: string;
+  }) {
+    const sqlNull =
+      comparator === GaqFilterComparators.EQUAL ? 'IS NULL' : 'IS NOT NULL';
+    return index === 0
+      ? ` (${filterQuery.key} ${sqlNull}`
+      : ` ${sqlCondition} ${filterQuery.key} ${sqlNull}`;
   }
 }

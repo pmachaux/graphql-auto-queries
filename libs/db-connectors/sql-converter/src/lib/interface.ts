@@ -1,9 +1,15 @@
 import { GaqDbQueryOptions, GaqRootQueryFilter } from '@gaq';
 
-export interface GaqSqlConverter<T extends object> {
-  convert(
-    filters: GaqRootQueryFilter<T>,
-    selectedFields: string[],
-    opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>
-  ): [string, any[]];
+export interface GaqSqlConverter {
+  convert({
+    filters,
+    table,
+    selectedFields,
+    opts,
+  }: {
+    filters: GaqRootQueryFilter<object>;
+    table: string;
+    selectedFields: string[];
+    opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>;
+  }): [string, any[]];
 }

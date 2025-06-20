@@ -28,7 +28,10 @@ export class SqlConverter implements GaqSqlConverter {
     let sql = `SELECT ${selectedFields.join(', ')} FROM ${table}`;
     let params: any[] = [];
     if (!isNullOrUndefinedOrEmptyObject(filters)) {
-      const [whereSql, whereParams] = this.getWhereClause(filters);
+      const [whereSql, whereParams] = this.getWhereClause({
+        filters,
+        paramsCount: 0,
+      });
       sql += ` WHERE${whereSql}`;
       params = whereParams;
     }
@@ -47,50 +50,78 @@ export class SqlConverter implements GaqSqlConverter {
     return [sql, params];
   }
 
-  protected getWhereClause<T extends object>(
-    filters: GaqRootQueryFilter<T>
-  ): [string, any[]] {
+  protected getWhereClause<T extends object>({
+    filters,
+    paramsCount,
+  }: {
+    filters: GaqRootQueryFilter<T>;
+    paramsCount: number;
+  }): [string, any[]] {
     let whereSql = '';
     const whereParams: any[] = [];
+    let updatedParamsCount = paramsCount;
     if (filters.and) {
-      const [conditionSql, conditionParams] = this.handleAndCondition(filters);
+      const [conditionSql, conditionParams] = this.handleAndCondition({
+        filters,
+        paramsCount: updatedParamsCount,
+      });
       whereSql += conditionSql;
       whereParams.push(...conditionParams);
+      updatedParamsCount += conditionParams.length;
     }
     if (filters.or) {
-      const [conditionSql, conditionParams] = this.handleOrCondition(filters);
+      const [conditionSql, conditionParams] = this.handleOrCondition({
+        filters,
+        paramsCount: updatedParamsCount,
+      });
       whereSql += conditionSql;
       whereParams.push(...conditionParams);
+      updatedParamsCount += conditionParams.length;
     }
     if (filters.nor) {
-      const [conditionSql, conditionParams] = this.handleNorCondition(filters);
+      const [conditionSql, conditionParams] = this.handleNorCondition({
+        filters,
+        paramsCount: updatedParamsCount,
+      });
       whereSql += ` NOT${conditionSql}`;
       whereParams.push(...conditionParams);
+      updatedParamsCount += conditionParams.length;
     }
     return [whereSql, whereParams];
   }
 
   protected handleSqlCondition =
     (key: 'and' | 'or' | 'nor') =>
-    <T extends object>(filters: GaqRootQueryFilter<T>): [string, any[]] => {
+    <T extends object>({
+      filters,
+      paramsCount,
+    }: {
+      filters: GaqRootQueryFilter<T>;
+      paramsCount: number;
+    }): [string, any[]] => {
       let conditionSql = '';
       const conditionParams = [];
       const sqlCondition = key === 'and' ? 'AND' : 'OR';
+      let updatedParamsCount = paramsCount;
       filters[key].forEach((filter, index) => {
         if (isFilterQuery(filter)) {
-          const [sql, params] = this.getSqlForFilterQuery(
+          const [sql, params] = this.getSqlForFilterQuery({
             filter,
             index,
-            sqlCondition
-          );
+            sqlCondition,
+            paramsCount: updatedParamsCount,
+          });
           conditionSql += sql;
           conditionParams.push(...params);
+          updatedParamsCount += params.length;
         } else {
-          const [nestedSql, nestedParams] = this.getWhereClause(
-            filter as GaqRootQueryFilter<object>
-          );
+          const [nestedSql, nestedParams] = this.getWhereClause({
+            filters: filter as GaqRootQueryFilter<object>,
+            paramsCount: updatedParamsCount,
+          });
           conditionSql += ` ${sqlCondition}${nestedSql}`;
           conditionParams.push(...nestedParams);
+          updatedParamsCount += nestedParams.length;
         }
       });
       return [conditionSql + ')', conditionParams];
@@ -123,21 +154,33 @@ export class SqlConverter implements GaqSqlConverter {
     }
   }
 
-  protected getSqlForFilterQuery(
-    filter: GaqFilterQuery<object, keyof object & string>,
-    index: number,
-    sqlCondition: 'AND' | 'OR'
-  ): [string, any[]] {
+  protected getSqlForFilterQuery({
+    filter,
+    index,
+    sqlCondition,
+    paramsCount,
+  }: {
+    filter: GaqFilterQuery<object, keyof object & string>;
+    index: number;
+    sqlCondition: 'AND' | 'OR';
+    paramsCount: number;
+  }): [string, any[]] {
     let conditionSql = '';
     const conditionParams = [];
     const sqlComparator = this.getComparatorSql(filter.comparator);
+    let updatedParamsCount = paramsCount;
     if (Array.isArray(filter.value)) {
-      const values = filter.value.map(() => '?').join(', ');
+      const values = filter.value
+        .map((v, index) =>
+          this.getParametrizedValue(v, index + updatedParamsCount)
+        )
+        .join(', ');
       conditionSql +=
         index === 0
           ? ` (${filter.key} ${sqlComparator} (${values})`
           : ` ${sqlCondition} ${filter.key} ${sqlComparator} (${values})`;
       conditionParams.push(...filter.value);
+      updatedParamsCount += filter.value.length;
     } else if (filter.value === null) {
       conditionSql += this.getSqlOnNullValue({
         comparator: filter.comparator,
@@ -148,9 +191,18 @@ export class SqlConverter implements GaqSqlConverter {
     } else {
       conditionSql +=
         index === 0
-          ? ` (${filter.key} ${sqlComparator} ?`
-          : ` ${sqlCondition} ${filter.key} ${sqlComparator} ?`;
+          ? ` (${filter.key} ${sqlComparator} ${this.getParametrizedValue(
+              filter.value,
+              updatedParamsCount
+            )}`
+          : ` ${sqlCondition} ${
+              filter.key
+            } ${sqlComparator} ${this.getParametrizedValue(
+              filter.value,
+              updatedParamsCount
+            )}`;
       conditionParams.push(filter.value);
+      updatedParamsCount += 1;
     }
     return [conditionSql, conditionParams];
   }

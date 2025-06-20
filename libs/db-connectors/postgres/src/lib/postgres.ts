@@ -8,6 +8,7 @@ import {
 } from '@gaq';
 import { PostgresGaqDbConnectorConfig } from './interface';
 import { SqlConverter } from '@gaq/sql-converter';
+import { PostgresSqlConverter } from './postgres.sql-converter';
 
 const getCollectionAdapter = <T extends object>({
   client,
@@ -39,7 +40,7 @@ const getCollectionAdapter = <T extends object>({
 };
 
 const getDbAdapter = (client: Client) => {
-  const sqlConverter = new SqlConverter();
+  const sqlConverter = new PostgresSqlConverter();
   return {
     getCollectionAdapter: <T extends object>(table: string) =>
       getCollectionAdapter<T>({ client, table, sqlConverter }),

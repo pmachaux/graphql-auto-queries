@@ -35,7 +35,7 @@ describe('GaqPostgresConnector', () => {
       typeDefs: `
           scalar DateTime
             type Actor @dbCollection(collectionName: "actor"){
-                actor_id: ID
+                actor_id: Int
                 first_name: String
                 last_name: String
                 last_update: DateTime

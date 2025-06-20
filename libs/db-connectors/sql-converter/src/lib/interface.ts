@@ -1,7 +1,7 @@
 import { GaqDbQueryOptions, GaqRootQueryFilter } from '@gaq';
 
 export interface GaqSqlConverter {
-  convert({
+  convertToQuery({
     filters,
     table,
     selectedFields,

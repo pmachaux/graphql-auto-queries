@@ -38,7 +38,7 @@ const leapYear = (year: number): boolean => {
 //   equals NaN.
 // - Leap seconds cannot be known in advance.
 //
-export const validateTime = (time: string): boolean => {
+export const isStringValidTime = (time: string): boolean => {
   time = time?.toUpperCase();
   const TIME_REGEX =
     /^([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.\d{1,})?(([Z])|([+|-]([01][0-9]|2[0-3]):[0-5][0-9]))$/;
@@ -68,7 +68,7 @@ export const validateTime = (time: string): boolean => {
 // 11            November             30
 // 12            December             31
 //
-export const validateDate = (datestring: string): boolean => {
+export const isStringValidDate = (datestring: string): boolean => {
   const RFC_3339_REGEX = /^(\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01]))$/;
 
   if (!RFC_3339_REGEX.test(datestring)) {
@@ -113,7 +113,7 @@ export const validateDate = (datestring: string): boolean => {
 //
 // Where *s is a fraction of seconds with at least 1 digit.
 //
-export const validateDateTime = (dateTimeString: string): boolean => {
+export const isValidStringDateTime = (dateTimeString: string): boolean => {
   dateTimeString = dateTimeString?.toUpperCase();
   const RFC_3339_REGEX =
     /^(\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60))(\.\d{1,})?(([Z])|([+|-]([01][0-9]|2[0-3]):[0-5][0-9]))$/;
@@ -133,7 +133,7 @@ export const validateDateTime = (dateTimeString: string): boolean => {
   const index = dateTimeString.indexOf('T');
   const dateString = dateTimeString.substr(0, index);
   const timeString = dateTimeString.substr(index + 1);
-  return validateDate(dateString) && validateTime(timeString);
+  return isStringValidDate(dateString) && isStringValidTime(timeString);
 };
 
 // Function that checks whether a given number is a valid

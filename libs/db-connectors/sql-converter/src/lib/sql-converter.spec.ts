@@ -9,7 +9,7 @@ describe('sqlConverter', () => {
   });
   describe('basics', () => {
     it('should be able to select all when no filters are passed', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {},
         table: 'book',
         selectedFields: ['id', 'title'],
@@ -19,7 +19,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual([]);
     });
     it('should be able to add a limit', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {},
         table: 'book',
         selectedFields: ['id', 'title'],
@@ -31,7 +31,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual([]);
     });
     it('should be able to add an offset', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {},
         table: 'book',
         selectedFields: ['id', 'title'],
@@ -43,7 +43,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual([]);
     });
     it('should be able to add a sort', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {},
         table: 'book',
         selectedFields: ['id', 'title'],
@@ -57,7 +57,7 @@ describe('sqlConverter', () => {
   });
   describe(' where clause', () => {
     it('should be able to add a simple filter', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {
           and: [
             {
@@ -75,7 +75,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual(['The Great Gatsby']);
     });
     it('should be able to add an AND condition', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {
           and: [
             {
@@ -100,7 +100,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual(['The Great Gatsby', 'F. Scott Fitzgerald']);
     });
     it('should be able to add an OR condition', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {
           or: [
             {
@@ -125,7 +125,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual(['The Great Gatsby', 'F. Scott Fitzgerald']);
     });
     it('should be able to add a NOR condition', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {
           nor: [
             {
@@ -150,7 +150,7 @@ describe('sqlConverter', () => {
       expect(params).toEqual(['The Great Gatsby', 'F. Scott Fitzgerald']);
     });
     it('should be able to handle nested conditions', () => {
-      const [sql, params] = sqlConverter.convert({
+      const [sql, params] = sqlConverter.convertToQuery({
         filters: {
           and: [
             {
@@ -189,7 +189,7 @@ describe('sqlConverter', () => {
     });
   });
   it('should be able to handle the not equal comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -207,7 +207,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual(['The Great Gatsby']);
   });
   it('should support null equality', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -232,7 +232,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual([]);
   });
   it('should support not null equality', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -257,7 +257,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual([]);
   });
   it('should be able to handle the greater comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -282,7 +282,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual(['The Great Gatsby', 'F. Scott Fitzgerald']);
   });
   it('should be able to handle the strictly greater comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -307,7 +307,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual(['The Great Gatsby', 'F. Scott Fitzgerald']);
   });
   it('should be able to handle the lower comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -332,7 +332,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual([2, 1]);
   });
   it('should be able to handle the strictly lower comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -357,7 +357,7 @@ describe('sqlConverter', () => {
     expect(params).toEqual([2, 1]);
   });
   it('should be able to handle the in comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {
@@ -387,7 +387,7 @@ describe('sqlConverter', () => {
     ]);
   });
   it('should be able to handle the not in comparator', () => {
-    const [sql, params] = sqlConverter.convert({
+    const [sql, params] = sqlConverter.convertToQuery({
       filters: {
         and: [
           {

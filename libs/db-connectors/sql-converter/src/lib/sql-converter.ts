@@ -8,19 +8,19 @@ import { isNullOrUndefinedOrEmptyObject } from './utils';
 import { GaqSqlConverter } from './interface';
 
 const isFilterQuery = (
-  filter: any
+  filter: object
 ): filter is GaqFilterQuery<object, keyof object & string> => {
   return 'key' in filter;
 };
 
 export class SqlConverter implements GaqSqlConverter {
-  public convert({
+  public convertToQuery<T extends object>({
     filters,
     table,
     selectedFields,
     opts,
   }: {
-    filters: GaqRootQueryFilter<object>;
+    filters: GaqRootQueryFilter<T>;
     table: string;
     selectedFields: string[];
     opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>;
@@ -47,8 +47,8 @@ export class SqlConverter implements GaqSqlConverter {
     return [sql, params];
   }
 
-  protected getWhereClause(
-    filters: GaqRootQueryFilter<object>
+  protected getWhereClause<T extends object>(
+    filters: GaqRootQueryFilter<T>
   ): [string, any[]] {
     let whereSql = '';
     const whereParams: any[] = [];
@@ -153,6 +153,10 @@ export class SqlConverter implements GaqSqlConverter {
       conditionParams.push(filter.value);
     }
     return [conditionSql, conditionParams];
+  }
+
+  protected getParametrizedValue(value: any, index: number) {
+    return '?';
   }
 
   protected getSqlOnNullValue({

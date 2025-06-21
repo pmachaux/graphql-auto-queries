@@ -39,6 +39,18 @@ describe('GaqPostgresConnector', () => {
                 first_name: String
                 last_name: String
                 last_update: DateTime
+
+            }
+            type Address @dbCollection(collectionName: "address"){
+                address_id: Int
+                address: String
+                city_id: Int
+                city: City
+            }
+            type City @dbCollection(collectionName: "city"){
+                city_id: Int
+                city: String
+                addresses: [Address]
             }
           `,
       dbAdapter,
@@ -72,6 +84,7 @@ describe('GaqPostgresConnector', () => {
                   first_name
                   last_name
                 }
+                count 
               }
             }`,
       variables: {
@@ -94,5 +107,174 @@ describe('GaqPostgresConnector', () => {
       first_name: 'PENELOPE',
       last_name: 'GUINESS',
     });
+    expect(response.body.data?.actorGaqQueryResult.count).toEqual(1);
+  });
+  it('should be able to query with count only', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            actorGaqQueryResult(filters: $filters) {
+              count
+            }
+          }`,
+      variables: {
+        filters: {},
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.actorGaqQueryResult.count).toEqual(200);
+  });
+  it('should be able to query with sorting', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            actorGaqQueryResult(filters: $filters, options: $options) {
+              result {
+                actor_id
+                first_name
+                last_name
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'first_name',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'JOHNNY',
+            },
+          ],
+        },
+        options: {
+          sort: [{ key: 'last_name', order: 1 }],
+        },
+      },
+    };
+    const responseWithAscendingSort = await request(url)
+      .post('/')
+      .send(queryData);
+    expect(responseWithAscendingSort.body.errors).toBeUndefined();
+    expect(
+      responseWithAscendingSort.body.data?.actorGaqQueryResult.result[0]
+    ).toEqual({
+      actor_id: 40,
+      first_name: 'JOHNNY',
+      last_name: 'CAGE',
+    });
+    expect(
+      responseWithAscendingSort.body.data?.actorGaqQueryResult.result[1]
+    ).toEqual({
+      actor_id: 5,
+      first_name: 'JOHNNY',
+      last_name: 'LOLLOBRIGIDA',
+    });
+
+    const responseWithDescendingSort = await request(url)
+      .post('/')
+      .send({
+        ...queryData,
+        variables: {
+          ...queryData.variables,
+          filters: {
+            ...queryData.variables.filters,
+          },
+          options: {
+            sort: [{ key: 'last_name', order: -1 }],
+          },
+        },
+      });
+
+    expect(
+      responseWithDescendingSort.body.data?.actorGaqQueryResult.result[0]
+    ).toEqual({
+      actor_id: 5,
+      first_name: 'JOHNNY',
+      last_name: 'LOLLOBRIGIDA',
+    });
+    expect(
+      responseWithDescendingSort.body.data?.actorGaqQueryResult.result[1]
+    ).toEqual({
+      actor_id: 40,
+      first_name: 'JOHNNY',
+      last_name: 'CAGE',
+    });
+  });
+  it('should be able to query with limit', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            actorGaqQueryResult(filters: $filters, options: $options) {
+              result {
+                actor_id
+                first_name
+                last_name
+              }
+              count
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'first_name',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'JOHNNY',
+            },
+          ],
+        },
+        options: {
+          sort: [{ key: 'last_name', order: 1 }],
+          limit: 1,
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.actorGaqQueryResult.result[0]).toEqual({
+      actor_id: 40,
+      first_name: 'JOHNNY',
+      last_name: 'CAGE',
+    });
+    expect(response.body.data?.actorGaqQueryResult.count).toEqual(1);
+  });
+  it('should be able to query with offset', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+            actorGaqQueryResult(filters: $filters, options: $options) {
+              result {
+                actor_id
+                first_name
+                last_name
+              }
+              count
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'first_name',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'JOHNNY',
+            },
+          ],
+        },
+        options: {
+          limit: 1,
+          sort: [{ key: 'last_name', order: 1 }],
+          offset: 1,
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.actorGaqQueryResult.result[0]).toEqual({
+      actor_id: 5,
+      first_name: 'JOHNNY',
+      last_name: 'LOLLOBRIGIDA',
+    });
+    expect(response.body.data?.actorGaqQueryResult.count).toEqual(1);
   });
 });

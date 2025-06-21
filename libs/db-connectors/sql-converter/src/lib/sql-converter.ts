@@ -14,6 +14,27 @@ const isFilterQuery = (
 };
 
 export class SqlConverter implements GaqSqlConverter {
+  public getCountQuery<T extends object>({
+    filters,
+    table,
+  }: {
+    filters: GaqRootQueryFilter<T>;
+    table: string;
+  }): [string, any[]] {
+    let sql = `SELECT COUNT(*) FROM ${table}`;
+    let params: any[] = [];
+    if (!isNullOrUndefinedOrEmptyObject(filters)) {
+      const [whereSql, whereParams] = this.getWhereClause({
+        filters,
+        paramsCount: 0,
+      });
+      sql += ` WHERE${whereSql}`;
+      params = whereParams;
+    }
+
+    return [sql, params];
+  }
+
   public convertToQuery<T extends object>({
     filters,
     table,
@@ -35,6 +56,39 @@ export class SqlConverter implements GaqSqlConverter {
       sql += ` WHERE${whereSql}`;
       params = whereParams;
     }
+    if (opts.sort) {
+      sql += ` ORDER BY ${opts.sort
+        .map((sort) => `${sort.key} ${sort.order === 1 ? 'ASC' : 'DESC'}`)
+        .join(', ')}`;
+    }
+    if (opts.limit) {
+      sql += ` LIMIT ${opts.limit}`;
+    }
+    if (opts.offset) {
+      sql += ` OFFSET ${opts.offset}`;
+    }
+
+    return [sql, params];
+  }
+
+  public getValuesInFieldQuery({
+    table,
+    payload,
+    selectedFields,
+    opts,
+  }: {
+    table: string;
+    payload: { field: string; values: any[] };
+    selectedFields: string[];
+    opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>;
+  }): [string, any[]] {
+    const parametrizedSql = payload.values
+      .map((v, index) => this.getParametrizedValue(v, index))
+      .join(', ');
+    let sql = `SELECT ${selectedFields.join(', ')} FROM ${table} WHERE ${
+      payload.field
+    } IN (${parametrizedSql})`;
+
     if (opts.limit) {
       sql += ` LIMIT ${opts.limit}`;
     }
@@ -47,7 +101,7 @@ export class SqlConverter implements GaqSqlConverter {
         .join(', ')}`;
     }
 
-    return [sql, params];
+    return [sql, payload.values];
   }
 
   protected getWhereClause<T extends object>({

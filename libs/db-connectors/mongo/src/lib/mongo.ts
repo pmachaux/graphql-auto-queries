@@ -28,72 +28,97 @@ const getCollectionAdapter = <T extends object>(
 ): GaqCollectionClient<T> => {
   const collection = db.collection(collectionName);
   return {
-    count: async (filters: GaqRootQueryFilter<T>) => {
-      const mongoFilters = getMongoFilters(filters);
-      return collection.countDocuments(mongoFilters);
+    count: async (filters: GaqRootQueryFilter<T>, opts: GaqDbQueryOptions) => {
+      try {
+        opts.logger.debug(
+          `[${opts.traceId}] Executing count query on ${collectionName}`
+        );
+        const mongoFilters = getMongoFilters(filters);
+        return collection.countDocuments(mongoFilters);
+      } catch (e) {
+        opts.logger.error(
+          `[${opts.traceId}] Error executing count query on ${collectionName}`
+        );
+        opts.logger.error(e);
+        throw e;
+      }
     },
     getFromGaqFilters: async (
       filters: GaqRootQueryFilter<T>,
       selectedFields: string[],
       opts: GaqDbQueryOptions
     ) => {
-      const mongoFilters = getMongoFilters(filters);
+      try {
+        const mongoFilters = getMongoFilters(filters);
+        const collectionQuery = collection.find(mongoFilters);
+        if (opts.limit) {
+          collectionQuery.limit(opts.limit);
+        }
+        if (opts.offset) {
+          collectionQuery.skip(opts.offset);
+        }
+        if (opts.sort) {
+          const sortObj = Object.fromEntries(
+            opts.sort.map((sort) => [sort.key, sort.order])
+          );
+          collectionQuery.sort(sortObj);
+        }
+        if (selectedFields.length > 0) {
+          collectionQuery.project(
+            Object.fromEntries(selectedFields.map((field) => [field, 1]))
+          );
+        }
 
-      const collectionQuery = collection.find(mongoFilters);
-
-      if (opts.limit) {
-        collectionQuery.limit(opts.limit);
-      }
-      if (opts.offset) {
-        collectionQuery.skip(opts.offset);
-      }
-      if (opts.sort) {
-        const sortObj = Object.fromEntries(
-          opts.sort.map((sort) => [sort.key, sort.order])
+        opts.logger.debug(
+          `[${opts.traceId}] Querying mongo collection ${collectionName}`
         );
-        collectionQuery.sort(sortObj);
-      }
-      if (selectedFields.length > 0) {
-        collectionQuery.project(
-          Object.fromEntries(selectedFields.map((field) => [field, 1]))
+        const result = await collectionQuery.toArray();
+        opts.logger.debug(
+          `[${opts.traceId}] Mongo query succedeed ${result.length} items`
         );
+        return standardizeMongoResult<T>(result);
+      } catch (e) {
+        opts.logger.error(
+          `[${opts.traceId}] Error executing getFromGaqFilters query on ${collectionName}`
+        );
+        opts.logger.error(e);
+        throw e;
       }
-
-      opts.logger.debug(
-        `[${opts.traceId}] Querying mongo collection ${collectionName}`
-      );
-      const result = await collectionQuery.toArray();
-      opts.logger.debug(
-        `[${opts.traceId}] Mongo query succedeed ${result.length} items`
-      );
-      return standardizeMongoResult<T>(result);
     },
     getValuesInField: async (
       payload,
       selectedFields: string[],
       opts: GaqDbQueryOptions
     ) => {
-      const mongoQuery = {
-        [payload.field]: {
-          $in: payload.values.flatMap((v) => {
-            if (ObjectId.isValid(v) && typeof v === 'string') {
-              return [v, new ObjectId(v)];
-            }
-            return v;
-          }),
-        },
-      };
-      opts.logger.debug(
-        `[${opts.traceId}] Querying mongo collection ${collectionName}`
-      );
-      const fingQuery = collection.find(mongoQuery);
-      if (selectedFields.length > 0) {
-        fingQuery.project(
-          Object.fromEntries(selectedFields.map((field) => [field, 1]))
+      try {
+        const mongoQuery = {
+          [payload.field]: {
+            $in: payload.values.flatMap((v) => {
+              if (ObjectId.isValid(v) && typeof v === 'string') {
+                return [v, new ObjectId(v)];
+              }
+              return v;
+            }),
+          },
+        };
+        opts.logger.debug(
+          `[${opts.traceId}] Querying mongo collection ${collectionName}`
         );
+        const fingQuery = collection.find(mongoQuery);
+        if (selectedFields.length > 0) {
+          fingQuery.project(
+            Object.fromEntries(selectedFields.map((field) => [field, 1]))
+          );
+        }
+        const result = await fingQuery.toArray();
+        return standardizeMongoResult(result);
+      } catch (e) {
+        opts.logger.error(
+          `[${opts.traceId}] Error executing getValuesInField query on ${collectionName}`
+        );
+        opts.logger.error(e);
+        throw e;
       }
-      const result = await fingQuery.toArray();
-      return standardizeMongoResult(result);
     },
   };
 };

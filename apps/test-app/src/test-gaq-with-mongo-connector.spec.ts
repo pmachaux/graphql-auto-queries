@@ -197,7 +197,7 @@ describe('Testing Gaq With Mongo connector', () => {
       _id: '573a13d6f29313caabda10e6',
       released: '2016-03-04T00:00:00.000Z',
     });
-  }, 30000);
+  });
   it('should be able to query with limit', async () => {
     const queryData = {
       query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
@@ -272,5 +272,21 @@ describe('Testing Gaq With Mongo connector', () => {
       _id: '573a13d8f29313caabda53e0',
     });
     expect(response.body.data?.movieGaqQueryResult.count).toEqual(2);
+  });
+  it('should be able to select all when no filters are passed', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            movieGaqQueryResult(filters: $filters) {
+              count
+            }
+          }`,
+      variables: {
+        filters: {},
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.movieGaqQueryResult.count).toEqual(21349);
   });
 });

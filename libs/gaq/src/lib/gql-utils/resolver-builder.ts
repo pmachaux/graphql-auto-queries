@@ -65,9 +65,14 @@ const getStandardResolver = (
       `[${contextValue.traceId}] Getting data from collection ${config.dbCollectionName}`
     );
     if (selectedFields.length === 0) {
-      return collectionClient.count(filters).then((count) => ({
-        count,
-      }));
+      return collectionClient
+        .count(filters, {
+          logger,
+          traceId: contextValue.traceId,
+        })
+        .then((count) => ({
+          count,
+        }));
     }
     let limit = options?.limit ?? config.defaultLimit;
     if (limit && config.maxLimit && limit > config.maxLimit) {

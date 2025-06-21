@@ -15,3 +15,5 @@ dist/*
 tmp/*
 
 .env
+
+ca.pem

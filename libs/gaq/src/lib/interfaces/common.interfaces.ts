@@ -1,13 +1,7 @@
-import { ApolloServer, ApolloServerOptions, BaseContext } from '@apollo/server';
+import { BaseContext } from '@apollo/server';
 import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
-import {
-  IResolvers,
-  ISchemaLevelResolver,
-  SchemaMapper,
-} from '@graphql-tools/utils';
-import { StartStandaloneServerOptions } from '@apollo/server/dist/esm/standalone';
-import { ListenOptions } from 'net';
-import { DocumentNode, GraphQLSchema } from 'graphql';
+import { ISchemaLevelResolver } from '@graphql-tools/utils';
+import { DocumentNode } from 'graphql';
 import type DataLoader = require('dataloader');
 
 export interface GaqLogger {
@@ -116,7 +110,10 @@ export type GaqDbQueryOptions = {
 };
 
 export interface GaqCollectionClient<T extends object> {
-  count(filters: GaqRootQueryFilter<T>): Promise<number>;
+  count(
+    filters: GaqRootQueryFilter<T>,
+    opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
+  ): Promise<number>;
   getFromGaqFilters(
     filters: GaqRootQueryFilter<T>,
     selectedFields: string[],
@@ -155,8 +152,6 @@ export enum GaqFilterComparators {
   ARRAY_CONTAINS = 'array-contains',
   ARRAY_CONTAINS_ANY = 'array-contains-any',
   ARRAY_ELEMENT_MATCH = 'array-element-match',
-  EXISTS = 'exists',
-  NOT_EXISTS = 'not-exists',
 }
 
 /*

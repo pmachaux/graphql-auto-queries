@@ -541,7 +541,6 @@ describe('mongo filters adapter', () => {
         ],
       };
       const resultObjectId = getMongoFilters(queryFilterObjectId);
-      console.log(resultObjectId['$and'][0]['_id']);
       expect(resultObjectId['$and'][0]['$or'][0]['_id']).toBe(
         '5a9427648b0beebeb6957ac8'
       );
@@ -683,7 +682,6 @@ describe('mongo filters adapter', () => {
       ],
     };
     const result = getMongoFilters(queryFilter);
-    console.log(result['$and'][0]);
     expect(result['$and'][0]['_id']['$in'][0]).toBe('123');
     expect(result['$and'][0]['_id']['$in'][1]).toBe('5a9427648b0beebeb6957ac8');
     expect(result['$and'][0]['_id']['$in'][2] instanceof ObjectId).toBe(true);
@@ -701,7 +699,6 @@ describe('mongo filters adapter', () => {
       ],
     };
     const result = getMongoFilters(queryFilter);
-    console.log(result['$and'][0]);
     expect(result['$and'][0]['_id']['$nin'][0]).toBe('123');
     expect(result['$and'][0]['_id']['$nin'][1]).toBe(
       '5a9427648b0beebeb6957ac8'

@@ -10,55 +10,8 @@ import {
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
 import { parseAstBaseValues } from './scalar.utils';
-import { validateDateTime } from './validator';
+import { isValidStringDateTime } from './validator';
 import { parseDateTime } from './formatter';
-
-const validateLimit = (limit: any, ast?: ASTNode) => {
-  if (limit > 0 && Number.isInteger(limit)) {
-    return;
-  }
-  throw createGraphQLError(
-    `Limit must be an integer higher than 0, received ${limit}`,
-    {
-      nodes: ast,
-    }
-  );
-};
-
-const validateOffset = (offset: any, ast?: ASTNode) => {
-  if (offset > 0 && Number.isInteger(offset)) {
-    return;
-  }
-  throw createGraphQLError(
-    `Offset must be an integer higher than 0, received ${offset}`,
-    {
-      nodes: ast,
-    }
-  );
-};
-
-const validateSorting = (sort: any, ast?: ASTNode) => {
-  if (!Array.isArray(sort)) {
-    throw createGraphQLError(`Expecting an array for sorting`, {
-      nodes: ast,
-    });
-  }
-  sort.forEach((f) => {
-    if (!f.key) {
-      throw createGraphQLError(`Expecting key sorting`, {
-        nodes: ast,
-      });
-    }
-    if (f.order !== 1 && f.order !== -1) {
-      throw createGraphQLError(
-        `Expected order to be 1 or -1 for sorting received ${f.order}`,
-        {
-          nodes: ast,
-        }
-      );
-    }
-  });
-};
 
 const validateGaqFilterQuery = (o8Query: any, ast?: ASTNode) => {
   if (o8Query.and || o8Query.nor || o8Query.or) {
@@ -156,7 +109,10 @@ export const validate = (
     }
   }
 
-  if (validateDateTime(o8FilterQuery.value)) {
+  if (
+    typeof o8FilterQuery.value === 'string' &&
+    isValidStringDateTime(o8FilterQuery.value)
+  ) {
     return { ...o8FilterQuery, value: parseDateTime(o8FilterQuery.value) };
   }
 

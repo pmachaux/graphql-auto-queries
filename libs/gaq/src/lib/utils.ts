@@ -35,3 +35,23 @@ export const isNullOrUndefinedOrEmptyObject = (
 ): boolean => {
   return obj === null || obj === undefined || Object.keys(obj).length === 0;
 };
+
+export const getFieldDataloaderName = ({
+  typeName,
+  fieldName,
+}: {
+  typeName: string;
+  fieldName: string;
+}): string => {
+  return `${typeName}${fieldName}Dataloader`;
+};
+
+export const getManyToManyFieldDataloaderName = ({
+  typeName,
+  fieldName,
+}: {
+  typeName: string;
+  fieldName: string;
+}): string => {
+  return `${typeName}${fieldName}ManyToManyDataloader`;
+};

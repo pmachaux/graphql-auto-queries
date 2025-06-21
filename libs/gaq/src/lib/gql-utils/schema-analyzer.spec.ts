@@ -4,7 +4,6 @@ import {
   setDbCollectionNameMap,
 } from './schema-analyzer';
 import { getTestLogger } from '../../mocks';
-import { DocumentNode, Kind } from 'graphql';
 import { print } from 'graphql';
 
 describe('schema-analyzer', () => {
@@ -189,6 +188,10 @@ describe('schema-analyzer', () => {
             fieldName: 'author',
             dataloaderName: 'BookauthorDataloader',
             limit: null,
+            mtmCollectionName: null,
+            mtmFieldKeyAlias: null,
+            mtmParentKeyAlias: null,
+            mtmDataloaderName: null,
           },
         ],
       });
@@ -241,6 +244,10 @@ describe('schema-analyzer', () => {
             fieldName: 'author',
             dataloaderName: 'BookauthorDataloader',
             limit: 5,
+            mtmCollectionName: null,
+            mtmFieldKeyAlias: null,
+            mtmParentKeyAlias: null,
+            mtmDataloaderName: null,
           },
         ],
       });
@@ -294,6 +301,10 @@ describe('schema-analyzer', () => {
             fieldName: 'reviews',
             dataloaderName: 'BookreviewsDataloader',
             limit: null,
+            mtmCollectionName: null,
+            mtmFieldKeyAlias: null,
+            mtmParentKeyAlias: null,
+            mtmDataloaderName: null,
           },
         ],
       });
@@ -314,6 +325,10 @@ describe('schema-analyzer', () => {
             fieldName: 'book',
             dataloaderName: 'ReviewbookDataloader',
             limit: null,
+            mtmCollectionName: null,
+            mtmFieldKeyAlias: null,
+            mtmParentKeyAlias: null,
+            mtmDataloaderName: null,
           },
         ],
       });
@@ -439,6 +454,10 @@ describe('schema-analyzer', () => {
             fieldName: 'author',
             dataloaderName: 'BookauthorDataloader',
             limit: null,
+            mtmCollectionName: null,
+            mtmFieldKeyAlias: null,
+            mtmParentKeyAlias: null,
+            mtmDataloaderName: null,
           },
           {
             parentKey: 'id',
@@ -448,6 +467,10 @@ describe('schema-analyzer', () => {
             fieldName: 'reviews',
             dataloaderName: 'BookreviewsDataloader',
             limit: null,
+            mtmCollectionName: null,
+            mtmFieldKeyAlias: null,
+            mtmParentKeyAlias: null,
+            mtmDataloaderName: null,
           },
         ],
       });
@@ -490,6 +513,10 @@ describe('schema-analyzer', () => {
         fieldName: 'author',
         dataloaderName: 'BookauthorDataloader',
         limit: null,
+        mtmCollectionName: null,
+        mtmFieldKeyAlias: null,
+        mtmParentKeyAlias: null,
+        mtmDataloaderName: null,
       });
       expect(gaqResolverDescriptions[1].fieldResolvers[0]).toEqual({
         parentKey: 'id',
@@ -499,6 +526,10 @@ describe('schema-analyzer', () => {
         fieldName: 'books',
         limit: null,
         dataloaderName: 'AuthorbooksDataloader',
+        mtmCollectionName: null,
+        mtmFieldKeyAlias: null,
+        mtmParentKeyAlias: null,
+        mtmDataloaderName: null,
       });
     });
     it('should handle @gaqIgnore directive and not generate resolvers for when directive is present', () => {
@@ -572,6 +603,73 @@ describe('schema-analyzer', () => {
         keys: ['id', 'bookId'],
         dataloaderName: 'ReviewfederationReferenceDataloader',
       });
+    });
+
+    it('should handle many to many field resolvers', () => {
+      const options = {
+        typeDefs: `
+        type Book @dbCollection(collectionName: "books") {
+          id: ID
+          title: String
+          authors: [Author] @fieldResolver(parentKey: "id", fieldKey: "id") @manyToManyFieldResolver(collectionName: "authors_books", fieldKeyAlias: "bookId", parentKeyAlias: "authorId")
+        }
+
+        type Author @dbCollection(collectionName: "authors") @key(fields: "id") {
+          id: ID
+          name: String
+        }
+      `,
+        dbAdapter: {
+          getCollectionAdapter: jest.fn(),
+        },
+      };
+      const { gaqResolverDescriptions } = getGaqTypeDefsAndResolvers(options, {
+        logger: getTestLogger(),
+      });
+      expect(gaqResolverDescriptions[0].fieldResolvers[0]).toEqual({
+        parentKey: 'id',
+        fieldKey: 'id',
+        isArray: true,
+        fieldType: 'Author',
+        fieldName: 'authors',
+        dataloaderName: 'BookauthorsDataloader',
+        limit: null,
+        mtmCollectionName: 'authors_books',
+        mtmFieldKeyAlias: 'bookId',
+        mtmParentKeyAlias: 'authorId',
+        mtmDataloaderName: 'BookauthorsManyToManyDataloader',
+      });
+    });
+    it('should throw error when manyToManyFieldResolver is used without fieldResolver directive', () => {
+      const options = {
+        typeDefs: `
+        type Book @dbCollection(collectionName: "books") {
+          id: ID
+          title: String
+          authors: [Author] @manyToManyFieldResolver(collectionName: "authors_books", fieldKeyAlias: "bookId", parentKeyAlias: "authorId")
+        }
+
+        type Author @dbCollection(collectionName: "authors") @key(fields: "id") {
+          id: ID
+          name: String
+        }
+      `,
+        dbAdapter: {
+          getCollectionAdapter: jest.fn(),
+        },
+      };
+      try {
+        getGaqTypeDefsAndResolvers(options, {
+          logger: getTestLogger(),
+        });
+        throw new Error(
+          'Test many to many field resolver should have thrown an error'
+        );
+      } catch (error) {
+        expect(error.message).toBe(
+          'FieldResolver directive is required on same field when using @manyToManyFieldResolver directive'
+        );
+      }
     });
   });
 });

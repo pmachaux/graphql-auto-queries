@@ -1,5 +1,5 @@
 import { BaseContext } from '@apollo/server';
-import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
+import { LooseAutocomplete, Nullable, Prettify } from './ts-wizard.interface';
 import { ISchemaLevelResolver } from '@graphql-tools/utils';
 import { DocumentNode } from 'graphql';
 import type DataLoader = require('dataloader');
@@ -33,17 +33,26 @@ export type GaqServerOptions = {
   logger?: GaqLogger;
 };
 
-export type GaqFieldResolverArguments = {
-  parentKey: string;
-  fieldKey: string;
-  limit: number | null;
+export type GaqManyToManyCollectionArguments = {
+  mtmCollectionName: string;
+  mtmFieldKeyAlias: string;
+  mtmParentKeyAlias: string;
 };
+
+export type GaqFieldResolverArguments = Prettify<
+  {
+    parentKey: string;
+    fieldKey: string;
+    limit: number | null;
+  } & Nullable<GaqManyToManyCollectionArguments>
+>;
 export type GaqFieldResolverDescription = Prettify<
   GaqFieldResolverArguments & {
     isArray: boolean;
     fieldType: string;
     fieldName: string;
     dataloaderName: string;
+    mtmDataloaderName: string | null;
   }
 >;
 

@@ -28,3 +28,14 @@ export type LooseAutocomplete = string & {};
  * type UserWithRequiredName = WithRequired<User, 'name'>; // name is required, age and email remain optional
  */
 export type WithRequired<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+/**
+ * Creates a type where all properties from T can be null
+ * @typeParam T - The base type
+ * @example
+ * type User = { name: string; age: number; email: string };
+ * type NullableUser = Nullable<User>; // name, age and email can be null
+ */
+export type Nullable<T> = {
+  [K in keyof T]: T[K] | null;
+};

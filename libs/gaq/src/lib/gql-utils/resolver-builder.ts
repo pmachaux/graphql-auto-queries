@@ -121,9 +121,17 @@ const getFieldResolver = (
       `[${contextValue.traceId}] Getting field resolver for ${fieldResolverDescription.fieldName}`
     );
 
-    const dataloader = contextValue.gaqDataloaders.get(
-      fieldResolverDescription.dataloaderName
-    );
+    const dataloaderName =
+      fieldResolverDescription.mtmDataloaderName ??
+      fieldResolverDescription.dataloaderName;
+
+    if (fieldResolverDescription.mtmDataloaderName) {
+      logger.debug(
+        `[${contextValue.traceId}] Using many to many dataloader for ${fieldResolverDescription.fieldName}`
+      );
+    }
+
+    const dataloader = contextValue.gaqDataloaders.get(dataloaderName);
     if (!dataloader) {
       logger.error(
         `[${contextValue.traceId}] Dataloader ${fieldResolverDescription.dataloaderName} not found`

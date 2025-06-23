@@ -150,7 +150,7 @@ const getFieldResolver = (
       })
       .catch((error) => {
         logger.error(
-          `[${contextValue.traceId}] Error fetching data for ${fieldResolverDescription.fieldName}: ${error}`
+          `[${contextValue.traceId}] Error fetching data for field ${fieldResolverDescription.fieldName}: ${error}`
         );
         throw new Error(GaqErrorCodes.INTERNAL_SERVER_ERROR);
       });

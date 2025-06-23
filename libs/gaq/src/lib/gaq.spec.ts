@@ -972,4 +972,78 @@ describe('gaq', () => {
       ]);
     });
   });
+  describe('many to many support', () => {
+    let server: ApolloServer<GaqContext>;
+    let url: string;
+    let bookAuthorsSpy: jest.SpyInstance;
+    beforeAll(async () => {
+      bookAuthorsSpy = jest.fn();
+      const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
+        logger: getTestLogger(),
+        typeDefs: `
+          type Book @dbCollection(collectionName: "books"){
+            id: ID
+            title: String
+            authors: [Author] @fieldResolver(parentKey: "authorId", fieldKey: "id") @manyToManyFieldResolver(collectionName: "books_authors", fieldKeyAlias: "authorId", parentKeyAlias: "bookId")
+          }
+        
+          type Author @dbCollection(collectionName: "authors"){
+            id: ID
+            name: String
+          }
+        `,
+        dbAdapter: getMockedDatasource({
+          bookAuthorsSpy: bookAuthorsSpy as any,
+        }),
+      });
+      server = new ApolloServer<GaqContext>({
+        typeDefs,
+        resolvers,
+      });
+      ({ url } = await startStandaloneServer(server, {
+        listen: { port: 0 },
+        context: async ({ req, res }) => {
+          return withGaqContextFn({ req, res });
+        },
+      }));
+    });
+    beforeEach(() => {
+      bookAuthorsSpy.mockClear();
+    });
+    afterAll(async () => {
+      await server.stop();
+    });
+    it('should be able to resolve many to many fields and query the dbAdapters with the proper arguments', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput!) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                title
+                authors {
+                  name
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {},
+        },
+      };
+      const response = await request(url).post('/').send(queryData);
+      expect(response.body.errors).toBeUndefined();
+      expect(bookAuthorsSpy.mock.calls[0][0]).toEqual(['1', '2', '3']);
+      expect(bookAuthorsSpy.mock.calls[0][1]).toEqual({
+        mtmCollectionName: 'books_authors',
+        mtmFieldKeyAlias: 'authorId',
+        mtmParentKeyAlias: 'bookId',
+        requestedFields: ['id', 'name'],
+      });
+      expect(bookAuthorsSpy.mock.calls[0][2].traceId).toBeDefined();
+
+      expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
+        title: 'The Great Gatsby',
+        authors: [{ name: 'F. Scott Fitzgerald' }, { name: 'Harper Lee' }],
+      });
+    }, 20000);
+  });
 });

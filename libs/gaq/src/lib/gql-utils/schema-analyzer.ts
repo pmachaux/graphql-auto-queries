@@ -497,23 +497,6 @@ export const setDbCollectionNameMap = (
             );
           }
         }
-
-        node.fields?.forEach((field) => {
-          const manyToManyDirective = field.directives?.find(
-            (directive) => directive.name.value === 'manyToManyFieldResolver'
-          );
-          if (manyToManyDirective) {
-            const collectionNameArg = manyToManyDirective.arguments?.find(
-              (arg) => arg.name.value === 'collectionName'
-            );
-            if (collectionNameArg?.value.kind === Kind.STRING) {
-              dbCollectionNameMap.set(
-                node.name.value,
-                collectionNameArg.value.value
-              );
-            }
-          }
-        });
       },
     },
   });

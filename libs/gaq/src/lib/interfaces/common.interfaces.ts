@@ -133,6 +133,18 @@ export interface GaqCollectionClient<T extends object> {
     selectedFields: string[],
     opts: GaqDbQueryOptions
   ): Promise<T[]>;
+  resolveManyToMany(
+    parentIds: Array<string | number>,
+    config: Prettify<
+      GaqManyToManyCollectionArguments & {
+        requestedFields: string[];
+      }
+    >,
+    opts: {
+      traceId: string;
+      logger: GaqLogger;
+    }
+  ): Promise<Array<{ entities: T[]; parentId: string | number }>>;
 }
 
 export interface GaqDbAdapter {

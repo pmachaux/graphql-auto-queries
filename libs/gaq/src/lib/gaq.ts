@@ -3,7 +3,7 @@ import { getTypeDefsAndResolvers } from './gql-utils/schema-analyzer';
 import { getDefaultLogger } from './logger';
 import { DocumentNode, parse } from 'graphql';
 import { randomUUID } from 'crypto';
-import { analyzeQueryForDataloaders } from './gql-utils/dataloader';
+import { analyzeQueryForDataloaders } from './gql-utils/dataloaders/dataloader.factories';
 import {} from '@apollo/server';
 import type { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 

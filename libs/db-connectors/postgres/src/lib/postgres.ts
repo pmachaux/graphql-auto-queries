@@ -99,7 +99,23 @@ const getCollectionAdapter = <T extends object>({
       config: GaqManyToManyCollectionConfig,
       opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
     ) => {
-      return [];
+      try {
+        opts.logger.debug(
+          `[${opts.traceId}] Executing resolveManyToMany query on ${config.mtmCollectionName}`
+        );
+        const [sql, params] = sqlConverter.getManyToManyQuery({
+          ...config,
+          parentIds,
+        });
+        const result = await client.query(sql, params);
+        return sqlConverter.parseManyToManyQueryResult(result.rows);
+      } catch (error) {
+        opts.logger.error(
+          `[${opts.traceId}] Error executing resolveManyToMany query on ${config.mtmCollectionName}`
+        );
+        opts.logger.error(error);
+        throw error;
+      }
     },
   };
 };

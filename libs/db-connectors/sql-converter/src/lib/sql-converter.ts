@@ -2,10 +2,12 @@ import {
   GaqDbQueryOptions,
   GaqFilterComparators,
   GaqFilterQuery,
+  GaqManyToManyCollectionConfig,
   GaqRootQueryFilter,
 } from '@gaq';
-import { isNullOrUndefinedOrEmptyObject } from './utils';
+import { isNullOrUndefinedOrEmptyObject } from '@gaq/utils';
 import { GaqSqlConverter } from './interface';
+import { omit } from '@gaq/utils';
 
 const isFilterQuery = (
   filter: object
@@ -102,6 +104,45 @@ export class SqlConverter implements GaqSqlConverter {
     }
 
     return [sql, payload.values];
+  }
+
+  public getManyToManyQuery({
+    mtmCollectionName,
+    fieldCollectionName,
+    requestedFields,
+    parentIds,
+    mtmParentKeyAlias,
+    mtmFieldKeyAlias,
+    fieldKey,
+  }: GaqManyToManyCollectionConfig & { parentIds: (string | number)[] }): [
+    string,
+    any[]
+  ] {
+    const fieldTableRequestedFields = requestedFields
+      .map((field) => `fi.${field}`)
+      .join(', ');
+    const parentKeysSql = parentIds
+      .map((key, index) => this.getParametrizedValue(key, index))
+      .join(', ');
+
+    const sql = `SELECT ${fieldTableRequestedFields}, mtm.${mtmParentKeyAlias} as "__mtm_parent_id" FROM ${fieldCollectionName} as fi INNER JOIN ${mtmCollectionName} as mtm ON fi.${fieldKey} = mtm.${mtmFieldKeyAlias} WHERE mtm.${mtmParentKeyAlias} IN (${parentKeysSql})`;
+
+    return [sql, parentIds];
+  }
+
+  public parseManyToManyQueryResult<T extends object>(
+    result: Array<T & { __mtm_parent_id: string | number }>
+  ): Array<{ entities: T[]; parentId: string | number }> {
+    return result.reduce((acc, item) => {
+      const parentId = item.__mtm_parent_id;
+      const entities = acc.find((i) => i.parentId === parentId)?.entities;
+      if (entities) {
+        entities.push(omit(item, '__mtm_parent_id') as T);
+      } else {
+        acc.push({ entities: [omit(item, '__mtm_parent_id') as T], parentId });
+      }
+      return acc;
+    }, [] as Array<{ entities: T[]; parentId: string | number }>);
   }
 
   protected getWhereClause<T extends object>({

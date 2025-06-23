@@ -56,6 +56,8 @@ describe('getResolversFromDescriptions', () => {
         getCollectionAdapter: jest.fn().mockImplementation((type) => ({
           getFromGaqFilters: getFromGaqFiltersSpy,
           getByField: jest.fn().mockResolvedValue([]),
+          count: jest.fn().mockResolvedValue(0),
+          resolveManyToMany: jest.fn().mockResolvedValue([]),
         })),
       },
       gaqDataloaders,
@@ -192,7 +194,6 @@ describe('getResolversFromDescriptions', () => {
       'users'
     );
   });
-
   describe('generateResolvers', () => {
     it('should generate resolvers from descriptions', () => {
       const gaqResolverDescriptions: GaqResolverDescription[] = [

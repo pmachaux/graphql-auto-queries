@@ -1,4 +1,9 @@
-import { GaqDbQueryOptions, GaqRootQueryFilter } from '@gaq';
+import {
+  GaqDbQueryOptions,
+  GaqManyToManyCollectionConfig,
+  GaqRootQueryFilter,
+} from '@gaq';
+import { Prettify } from '@gaq/utils';
 
 export interface GaqSqlConverter {
   getCountQuery(args: {
@@ -17,4 +22,12 @@ export interface GaqSqlConverter {
     selectedFields: string[];
     opts: Pick<GaqDbQueryOptions, 'limit' | 'offset' | 'sort'>;
   }): [string, any[]];
+  getManyToManyQuery(
+    args: Prettify<
+      GaqManyToManyCollectionConfig & { parentIds: (string | number)[] }
+    >
+  ): [string, any[]];
+  parseManyToManyQueryResult<T extends object>(
+    result: Array<T & { __mtm_parent_id: string | number }>
+  ): Array<{ entities: T[]; parentId: string | number }>;
 }

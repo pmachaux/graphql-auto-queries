@@ -27,7 +27,7 @@ import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 import {
   getFieldDataloaderName,
   getManyToManyFieldDataloaderName,
-} from '../utils';
+} from '@gaq/utils';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar

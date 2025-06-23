@@ -11,7 +11,7 @@ import {
   isNullOrUndefinedOrEmptyObject,
   omit,
   pickNonNullable,
-} from '../utils';
+} from '@gaq/utils';
 import { GaqErrorCodes } from '../interfaces/gaq-errors.interface';
 import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
 import graphqlFields = require('graphql-fields');
@@ -22,6 +22,7 @@ const getStandardResolver = (
     dbCollectionName: string;
     defaultLimit: number | null;
     maxLimit: number | null;
+    fieldsWithResolvers: string[];
   },
   { logger }: { logger: GaqLogger }
 ): GaqSchemaLevelResolver => {
@@ -42,7 +43,9 @@ const getStandardResolver = (
     if (!requestedFields.result && !requestedFields.count) {
       throw new Error(GaqErrorCodes.INVALID_REQUEST);
     }
-    const selectedFields = Object.keys(requestedFields.result ?? {});
+    const selectedFields = Object.keys(requestedFields.result ?? {}).filter(
+      (field) => !config.fieldsWithResolvers.includes(field)
+    );
 
     logger.debug(
       `[${contextValue.traceId}] Selected fields for ${
@@ -240,6 +243,10 @@ const getQueryFieldAndReferenceResolver = (
   resolverDescription: GaqResolverDescription,
   { logger }: { logger: GaqLogger }
 ) => {
+  const fieldsWithResolvers = resolverDescription.fieldResolvers.map(
+    (fieldResolver) => fieldResolver.fieldName
+  );
+
   const queryResolver = {
     [resolverDescription.queryName]: getStandardResolver(
       {
@@ -247,6 +254,7 @@ const getQueryFieldAndReferenceResolver = (
         dbCollectionName: resolverDescription.dbCollectionName,
         defaultLimit: resolverDescription.defaultLimit,
         maxLimit: resolverDescription.maxLimit,
+        fieldsWithResolvers,
       },
       { logger }
     ),

@@ -5,6 +5,7 @@ import {
   GaqFilterQueryOnArrayElementMatch,
   GaqRootQueryFilter,
 } from '@gaq';
+import { omit, pickNonNullable } from '@gaq/utils';
 import { Condition, ObjectId } from 'mongodb';
 
 type MongoFilterQuery<T extends object> = {
@@ -17,29 +18,6 @@ type ConditionAdapterFn = <T extends object>(
 type ArrayElementMatchConditionAdapterFn = <T extends object>(
   filter: GaqFilterQueryOnArrayElementMatch<T>
 ) => Condition<T>;
-
-const pickNonNullable = <T extends object, K extends keyof T>(
-  source: T,
-  ...keys: K[]
-): Pick<T, K> => {
-  return keys.reduce((acc, key) => {
-    if (source[key] !== null && source[key] !== undefined) {
-      return { ...acc, [key]: source[key] };
-    }
-    return acc;
-  }, {} as Pick<T, K>);
-};
-
-const omit = <T extends object, K extends keyof T>(
-  source: T,
-  ...keys: K[]
-): Omit<T, K> => {
-  const obj = { ...source };
-  keys.forEach((k) => {
-    delete obj[k];
-  });
-  return obj;
-};
 
 const handleIdFilter = <T extends object>(
   filter: GaqFilterQuery<T>

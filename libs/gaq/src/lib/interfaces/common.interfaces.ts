@@ -1,5 +1,5 @@
 import { BaseContext } from '@apollo/server';
-import { LooseAutocomplete, Nullable, Prettify } from './ts-wizard.interface';
+import { LooseAutocomplete, Nullable, Prettify } from '@gaq/utils';
 import { ISchemaLevelResolver } from '@graphql-tools/utils';
 import { DocumentNode } from 'graphql';
 import type DataLoader = require('dataloader');
@@ -122,6 +122,7 @@ export type GaqManyToManyCollectionConfig = Prettify<
   GaqManyToManyCollectionArguments & {
     requestedFields: string[];
     fieldCollectionName: string;
+    fieldKey: string;
   }
 >;
 

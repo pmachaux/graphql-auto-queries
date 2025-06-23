@@ -482,4 +482,43 @@ describe('sqlConverter', () => {
       expect(params).toEqual(['The Great Gatsby']);
     });
   });
+  describe('getManyToManyQuery', () => {
+    it('should create a query to get many-to-many relationships', () => {
+      const [sql, params] = sqlConverter.getManyToManyQuery({
+        mtmCollectionName: 'book_author',
+        fieldCollectionName: 'author',
+        requestedFields: ['id', 'name'],
+        parentIds: [1, 2, 3],
+        mtmParentKeyAlias: 'book_id',
+        mtmFieldKeyAlias: 'author_id',
+        fieldKey: 'id',
+      });
+      expect(sql).toEqual(
+        'SELECT fi.id, fi.name, mtm.book_id as "__mtm_parent_id" FROM author as fi INNER JOIN book_author as mtm ON fi.id = mtm.author_id WHERE mtm.book_id IN (?, ?, ?)'
+      );
+      expect(params).toEqual([1, 2, 3]);
+    });
+  });
+  describe('parseManyToManyQueryResult', () => {
+    it('should parse the result of a many-to-many query', () => {
+      const result = sqlConverter.parseManyToManyQueryResult([
+        { id: 1, name: 'John Doe', __mtm_parent_id: 1 },
+        { id: 2, name: 'Jane Doe', __mtm_parent_id: 1 },
+        { id: 3, name: 'Jim Doe', __mtm_parent_id: 2 },
+      ]);
+      expect(result).toEqual([
+        {
+          parentId: 1,
+          entities: [
+            { id: 1, name: 'John Doe' },
+            { id: 2, name: 'Jane Doe' },
+          ],
+        },
+        {
+          parentId: 2,
+          entities: [{ id: 3, name: 'Jim Doe' }],
+        },
+      ]);
+    });
+  });
 });

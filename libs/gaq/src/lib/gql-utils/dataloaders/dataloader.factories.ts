@@ -15,7 +15,7 @@ import {
 import {
   getFieldDataloaderName,
   getManyToManyFieldDataloaderName,
-} from '../../utils';
+} from '@gaq/utils';
 import { batchLoadFnForReferenceResolution } from './entity-dataloader';
 import { batchLoadFnForFieldResolution } from './field-dataloader';
 import { batchLoadFnForManyToManyFieldResolution } from './mtm-dataloader';
@@ -123,7 +123,7 @@ const findRequestedFieldsForDataloaderFromQueryDefinition = (
       }
     }
   }
-  return requestedFields;
+  return Array.from(new Set(requestedFields));
 };
 
 const getFieldAndMTMDataloadersMap = (

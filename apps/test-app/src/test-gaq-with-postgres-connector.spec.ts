@@ -39,18 +39,22 @@ describe('GaqPostgresConnector', () => {
                 first_name: String
                 last_name: String
                 last_update: DateTime
-
+                films: [Film] @fieldResolver(parentKey: "actor_id", fieldKey: "film_id") @manyToManyFieldResolver(collectionName: "film_actor", fieldKeyAlias: "film_id", parentKeyAlias: "actor_id")
             }
             type Address @dbCollection(collectionName: "address"){
                 address_id: Int
                 address: String
                 city_id: Int
-                city: City
+                city: City @fieldResolver(parentKey: "city_id", fieldKey: "city_id")
             }
             type City @dbCollection(collectionName: "city"){
                 city_id: Int
                 city: String
                 addresses: [Address]
+            }
+            type Film @dbCollection(collectionName: "film"){
+                film_id: Int
+                title: String
             }
           `,
       dbAdapter,
@@ -276,5 +280,82 @@ describe('GaqPostgresConnector', () => {
       last_name: 'LOLLOBRIGIDA',
     });
     expect(response.body.data?.actorGaqQueryResult.count).toEqual(1);
+  });
+  it('should be able to query with many-to-many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            actorGaqQueryResult(filters: $filters) {
+              result {
+                actor_id
+                first_name
+                last_name
+                films { 
+                  film_id
+                  title
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'actor_id',
+              comparator: GaqFilterComparators.IN,
+              value: [1, 2],
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.actorGaqQueryResult.result[0].actor_id).toBe(1);
+    expect(
+      response.body.data?.actorGaqQueryResult.result[0].films
+    ).toHaveLength(19);
+    expect(response.body.data?.actorGaqQueryResult.result[1].actor_id).toBe(2);
+    expect(
+      response.body.data?.actorGaqQueryResult.result[1].films
+    ).toHaveLength(25);
+  });
+  it('should be able to resolve a one to many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            addressGaqQueryResult(filters: $filters) {
+              result {
+                address_id
+                address
+                city_id
+                city{
+                  city_id
+                  city
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'address_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 1,
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.addressGaqQueryResult.result[0].address_id).toBe(
+      1
+    );
+    expect(
+      response.body.data?.addressGaqQueryResult.result[0].city.city_id
+    ).toBe(300);
+    expect(response.body.data?.addressGaqQueryResult.result[0].city.city).toBe(
+      'Lethbridge'
+    );
   });
 });

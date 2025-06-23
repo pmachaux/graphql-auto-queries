@@ -213,13 +213,16 @@ describe('gaq', () => {
         ],
       });
     });
-    it('should request to the db provider only the selected fields in the query and nothing more', async () => {
+    it('should request to the db provider only the selected fields in the query and nothing more, also not request fields with resolvers to th DB', async () => {
       const queryData = {
         query: `query($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
             bookGaqQueryResult(filters: $filters, options: $options) {
               result {
                 title
                 authorId
+                author {
+                  name
+                }
               }
             }
           }`,
@@ -984,7 +987,7 @@ describe('gaq', () => {
           type Book @dbCollection(collectionName: "books"){
             id: ID
             title: String
-            authors: [Author] @fieldResolver(parentKey: "authorId", fieldKey: "id") @manyToManyFieldResolver(collectionName: "books_authors", fieldKeyAlias: "authorId", parentKeyAlias: "bookId")
+            authors: [Author] @fieldResolver(parentKey: "id", fieldKey: "authorId") @manyToManyFieldResolver(collectionName: "books_authors", fieldKeyAlias: "author_id", parentKeyAlias: "bookId")
           }
         
           type Author @dbCollection(collectionName: "awesome_authors"){
@@ -1034,10 +1037,11 @@ describe('gaq', () => {
       expect(bookAuthorsSpy.mock.calls[0][0]).toEqual(['1', '2', '3']);
       expect(bookAuthorsSpy.mock.calls[0][1]).toEqual({
         mtmCollectionName: 'books_authors',
-        mtmFieldKeyAlias: 'authorId',
+        mtmFieldKeyAlias: 'author_id',
         mtmParentKeyAlias: 'bookId',
-        requestedFields: ['id', 'name'],
+        requestedFields: ['authorId', 'name'],
         fieldCollectionName: 'awesome_authors',
+        fieldKey: 'authorId',
       });
       expect(bookAuthorsSpy.mock.calls[0][2].traceId).toBeDefined();
 

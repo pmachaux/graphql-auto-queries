@@ -60,6 +60,7 @@ export const batchLoadFnForManyToManyFieldResolution =
             mtmParentKeyAlias: fieldResolver.mtmParentKeyAlias,
             requestedFields,
             fieldCollectionName,
+            fieldKey: fieldResolver.fieldKey,
           },
           {
             logger,

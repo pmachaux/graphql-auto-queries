@@ -118,6 +118,13 @@ export type GaqDbQueryOptions = {
   traceId: string;
 };
 
+export type GaqManyToManyCollectionConfig = Prettify<
+  GaqManyToManyCollectionArguments & {
+    requestedFields: string[];
+    fieldCollectionName: string;
+  }
+>;
+
 export interface GaqCollectionClient<T extends object> {
   count(
     filters: GaqRootQueryFilter<T>,
@@ -135,11 +142,7 @@ export interface GaqCollectionClient<T extends object> {
   ): Promise<T[]>;
   resolveManyToMany(
     parentIds: Array<string | number>,
-    config: Prettify<
-      GaqManyToManyCollectionArguments & {
-        requestedFields: string[];
-      }
-    >,
+    config: GaqManyToManyCollectionConfig,
     opts: {
       traceId: string;
       logger: GaqLogger;

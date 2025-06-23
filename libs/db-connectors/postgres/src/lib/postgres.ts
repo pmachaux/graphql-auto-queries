@@ -5,6 +5,7 @@ import {
   GaqRootQueryFilter,
   GaqDbQueryOptions,
   GaqLogger,
+  GaqManyToManyCollectionConfig,
 } from '@gaq';
 import { PostgresGaqDbConnectorConfig } from './interface';
 import { SqlConverter } from '@gaq/sql-converter';
@@ -92,6 +93,13 @@ const getCollectionAdapter = <T extends object>({
         opts.logger.error(error);
         throw error;
       }
+    },
+    resolveManyToMany: async (
+      parentIds: (string | number)[],
+      config: GaqManyToManyCollectionConfig,
+      opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
+    ) => {
+      return [];
     },
   };
 };

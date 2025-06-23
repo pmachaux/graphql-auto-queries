@@ -70,7 +70,7 @@ export const batchLoadFnForFieldResolution =
           requestedFields,
           {
             logger,
-            traceId: fieldResolver.dataloaderName,
+            traceId,
             limit: fieldResolver.limit,
           }
         );

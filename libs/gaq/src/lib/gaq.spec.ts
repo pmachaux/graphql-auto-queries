@@ -987,7 +987,7 @@ describe('gaq', () => {
             authors: [Author] @fieldResolver(parentKey: "authorId", fieldKey: "id") @manyToManyFieldResolver(collectionName: "books_authors", fieldKeyAlias: "authorId", parentKeyAlias: "bookId")
           }
         
-          type Author @dbCollection(collectionName: "authors"){
+          type Author @dbCollection(collectionName: "awesome_authors"){
             id: ID
             name: String
           }
@@ -1037,6 +1037,7 @@ describe('gaq', () => {
         mtmFieldKeyAlias: 'authorId',
         mtmParentKeyAlias: 'bookId',
         requestedFields: ['id', 'name'],
+        fieldCollectionName: 'awesome_authors',
       });
       expect(bookAuthorsSpy.mock.calls[0][2].traceId).toBeDefined();
 

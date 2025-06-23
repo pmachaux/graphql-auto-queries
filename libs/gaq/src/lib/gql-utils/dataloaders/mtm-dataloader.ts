@@ -35,41 +35,47 @@ export const batchLoadFnForManyToManyFieldResolution =
   ): DataLoader.BatchLoadFn<string | number, T[]> => {
     return async (keys: (string | number)[]): Promise<T[][]> => {
       logger.debug(
-        `[${traceId}][${fieldResolver.dataloaderName}] Getting data from ${fieldResolver.mtmCollectionName} for values ${keys} with dataloader`
+        `[${traceId}][${fieldResolver.mtmDataloaderName}] Getting data from ${fieldResolver.mtmCollectionName} for values ${keys} with dataloader`
       );
-      const collectionClient = gaqDbClient.getCollectionAdapter(
+      const mtmCollectionClient = gaqDbClient.getCollectionAdapter(
         fieldResolver.mtmCollectionName
       );
-      if (!collectionClient) {
+      if (!mtmCollectionClient) {
         logger.warn(
-          `[${traceId}][${fieldResolver.dataloaderName}] No collection client found for ${fieldResolver.mtmCollectionName}`
+          `[${traceId}][${fieldResolver.mtmDataloaderName}] No collection client found for ${fieldResolver.mtmCollectionName}`
         );
         return new Array(keys.length).fill(null);
       }
+
+      const fieldCollectionName = dbCollectionNameMap.get(
+        fieldResolver.fieldType
+      );
+
       try {
-        const values = await collectionClient.resolveManyToMany(
+        const values = await mtmCollectionClient.resolveManyToMany(
           keys,
           {
             mtmCollectionName: fieldResolver.mtmCollectionName,
             mtmFieldKeyAlias: fieldResolver.mtmFieldKeyAlias,
             mtmParentKeyAlias: fieldResolver.mtmParentKeyAlias,
             requestedFields,
+            fieldCollectionName,
           },
           {
             logger,
-            traceId: fieldResolver.dataloaderName,
+            traceId,
           }
         );
         logger.debug(
-          `[${traceId}][${fieldResolver.dataloaderName}] Found ${values.length} values for ${fieldResolver.mtmCollectionName}`
+          `[${traceId}][${fieldResolver.mtmDataloaderName}] Found ${values.length} values for ${fieldResolver.mtmCollectionName}`
         );
         return matchingFnForManyToManyFieldResolution(values, keys);
       } catch (error) {
         logger.error(
-          `[${traceId}][${fieldResolver.dataloaderName}] Error getting data from Many to Many collection ${fieldResolver.mtmCollectionName} for keys ${keys}`
+          `[${traceId}][${fieldResolver.mtmDataloaderName}] Error getting data from Many to Many collection ${fieldResolver.mtmCollectionName} for keys ${keys}`
         );
         logger.error(
-          `[${traceId}][${fieldResolver.dataloaderName}]: ${JSON.stringify(
+          `[${traceId}][${fieldResolver.mtmDataloaderName}]: ${JSON.stringify(
             error
           )}`
         );

@@ -126,6 +126,11 @@ export type GaqManyToManyCollectionConfig = Prettify<
   }
 >;
 
+export type GaqManyToManyAdapterResponse<T extends object> = {
+  entities: T[];
+  parentId: string | number;
+};
+
 export interface GaqCollectionClient<T extends object> {
   count(
     filters: GaqRootQueryFilter<T>,
@@ -148,7 +153,7 @@ export interface GaqCollectionClient<T extends object> {
       traceId: string;
       logger: GaqLogger;
     }
-  ): Promise<Array<{ entities: T[]; parentId: string | number }>>;
+  ): Promise<Array<GaqManyToManyAdapterResponse<T>>>;
 }
 
 export interface GaqDbAdapter {

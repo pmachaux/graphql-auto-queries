@@ -6,6 +6,7 @@ import {
   GaqDbQueryOptions,
   GaqLogger,
   GaqManyToManyCollectionConfig,
+  GaqManyToManyAdapterResponse,
 } from '@gaq';
 import { PostgresGaqDbConnectorConfig } from './interface';
 import { SqlConverter } from '@gaq/sql-converter';
@@ -98,7 +99,7 @@ const getCollectionAdapter = <T extends object>({
       parentIds: (string | number)[],
       config: GaqManyToManyCollectionConfig,
       opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
-    ) => {
+    ): Promise<Array<GaqManyToManyAdapterResponse<T>>> => {
       try {
         opts.logger.debug(
           `[${opts.traceId}] Executing resolveManyToMany query on ${config.mtmCollectionName}`

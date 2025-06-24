@@ -105,7 +105,7 @@ describe('mongo filters adapter', () => {
       const result = getMongoFilters({
         and: [{ value, comparator: GaqFilterComparators.IN, key: 'name' }],
       });
-      expect((result['$and'] as any)[0].name['$in']).toBe(value);
+      expect((result['$and'] as any)[0].name['$in']).toEqual(value);
     });
     it('should throw an error when the value for the comparator IN is not an array', () => {
       try {
@@ -132,7 +132,7 @@ describe('mongo filters adapter', () => {
       const result = getMongoFilters({
         and: [{ value, comparator: GaqFilterComparators.NOT_IN, key: 'name' }],
       });
-      expect((result['$and'] as any)[0].name['$nin']).toBe(value);
+      expect((result['$and'] as any)[0].name['$nin']).toEqual(value);
     });
     it('should throw an error when the value for the comparator NOT_IN is not an array', () => {
       try {
@@ -198,7 +198,7 @@ describe('mongo filters adapter', () => {
           },
         ],
       });
-      expect((result['$and'] as any)[0].name['$in']).toBe(value);
+      expect((result['$and'] as any)[0].name['$in']).toEqual(value);
     });
     it('should throw an error when the value for the comparator ARRAY_CONTAINS_ANY is not an array', () => {
       try {
@@ -521,13 +521,16 @@ describe('mongo filters adapter', () => {
         _id: string;
       }> = {
         and: [
-          { key: '_id', value: '123', comparator: GaqFilterComparators.EQUAL },
+          {
+            key: '_id',
+            value: '123',
+            comparator: GaqFilterComparators.EQUAL,
+          },
         ],
       };
       const resultSimpleString = getMongoFilters(queryFilterSimpleString);
 
-      expect(resultSimpleString['$and'][0]['$or'][0]['_id']).toBe('123');
-      expect(resultSimpleString['$and'][0]['$or'].length).toBe(1);
+      expect(resultSimpleString['$and'][0]['_id']).toEqual({ $eq: '123' });
 
       const queryFilterObjectId: GaqRootQueryFilter<{
         _id: string;
@@ -563,7 +566,7 @@ describe('mongo filters adapter', () => {
       ],
     };
     const resultSimpleString = getMongoFilters(queryFilterSimpleString);
-    expect(resultSimpleString['$and'][0]['$and'][0]['_id']['$ne']).toBe('123');
+    expect(resultSimpleString['$and'][0]['_id']['$ne']).toBe('123');
 
     const queryFilterObjectId: GaqRootQueryFilter<{
       _id: string;
@@ -704,5 +707,84 @@ describe('mongo filters adapter', () => {
       '5a9427648b0beebeb6957ac8'
     );
     expect(result['$and'][0]['_id']['$nin'][2] instanceof ObjectId).toBe(true);
+  });
+  it('should handle _id filter with ARRAY_CONTAINS comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: ['5a9427648b0beebeb6957ac8'],
+          comparator: GaqFilterComparators.ARRAY_CONTAINS,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['_id']['$all'][0].toString()).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['_id']['$all'][0] instanceof ObjectId).toBe(true);
+  });
+  it('should not transform the value for ARRAY_CONTAINS if it is not an array of ObjectId', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: ['5a9427648b0beebeb6957ac8', '123'],
+          comparator: GaqFilterComparators.ARRAY_CONTAINS,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['_id']['$all'][0]).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['_id']['$all'][1] instanceof ObjectId).toBe(false);
+    expect(result['$and'][0]['_id']['$all'][1]).toBe('123');
+  });
+  it('should handle _id filter with ARRAY_CONTAINS_ANY comparator', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: '_id',
+          value: ['5a9427648b0beebeb6957ac8', '123'],
+          comparator: GaqFilterComparators.ARRAY_CONTAINS_ANY,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['_id']['$in'][0]).toBe('5a9427648b0beebeb6957ac8');
+    expect(result['$and'][0]['_id']['$in'][1].toString()).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['_id']['$in'][1] instanceof ObjectId).toBe(true);
+    expect(result['$and'][0]['_id']['$in'][2]).toBe('123');
+    expect(result['$and'][0]['_id']['$in'][3] instanceof ObjectId).toBe(false);
+  });
+  it('should handle every value that can be an ObjectId even on non _id fields', () => {
+    const queryFilter: GaqRootQueryFilter<{
+      _id: string;
+    }> = {
+      and: [
+        {
+          key: 'movie_id',
+          value: '5a9427648b0beebeb6957ac8',
+          comparator: GaqFilterComparators.EQUAL,
+        },
+      ],
+    };
+    const result = getMongoFilters(queryFilter);
+    expect(result['$and'][0]['$or'][0]['movie_id']).toBe(
+      '5a9427648b0beebeb6957ac8'
+    );
+    expect(result['$and'][0]['$or'][1]['movie_id'] instanceof ObjectId).toBe(
+      true
+    );
+    expect(result['$and'][0]['$or'].length).toBe(2);
   });
 });

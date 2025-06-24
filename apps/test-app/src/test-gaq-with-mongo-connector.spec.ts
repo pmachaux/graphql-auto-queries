@@ -289,4 +289,86 @@ describe('Testing Gaq With Mongo connector', () => {
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data?.movieGaqQueryResult.count).toEqual(21349);
   });
+  it('should be able to resolve one to many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                title
+                comments {
+                  name
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: '_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: '573a1397f29313caabce8bad',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].comments
+    ).toHaveLength(2);
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].comments[0].name
+    ).toBe('Bronn');
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].comments[1].name
+    ).toBe('Mace Tyrell');
+  });
+  it('should be able to resolve many to one relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            commentGaqQueryResult(filters: $filters) {
+              result {
+                name
+                movie_id
+                movie {
+                  _id
+                  title
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'movie_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: '573a1397f29313caabce8bad',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.commentGaqQueryResult.result[0].movie.title
+    ).toBe('The Moon in the Gutter');
+    expect(response.body.data?.commentGaqQueryResult.result[0].name).toBe(
+      'Bronn'
+    );
+    expect(response.body.data?.commentGaqQueryResult.result[0].movie._id).toBe(
+      '573a1397f29313caabce8bad'
+    );
+    expect(response.body.data?.commentGaqQueryResult.result[1].name).toBe(
+      'Mace Tyrell'
+    );
+    expect(response.body.data?.commentGaqQueryResult.result[1].movie._id).toBe(
+      '573a1397f29313caabce8bad'
+    );
+  });
+  it('should be able to resolve many to many relationship', async () => {});
 });

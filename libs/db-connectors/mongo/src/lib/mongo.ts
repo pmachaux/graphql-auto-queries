@@ -4,6 +4,8 @@ import {
   GaqCollectionClient,
   GaqRootQueryFilter,
   GaqDbQueryOptions,
+  GaqManyToManyAdapterResponse,
+  GaqManyToManyCollectionConfig,
 } from '@gaq';
 import { getMongoFilters } from './mongo-filters.adapter';
 
@@ -119,6 +121,13 @@ const getCollectionAdapter = <T extends object>(
         opts.logger.error(e);
         throw e;
       }
+    },
+    resolveManyToMany: async (
+      parentIds: (string | number)[],
+      config: GaqManyToManyCollectionConfig,
+      opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
+    ): Promise<Array<GaqManyToManyAdapterResponse<T>>> => {
+      return [];
     },
   };
 };

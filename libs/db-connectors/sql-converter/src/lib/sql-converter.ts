@@ -2,6 +2,7 @@ import {
   GaqDbQueryOptions,
   GaqFilterComparators,
   GaqFilterQuery,
+  GaqManyToManyAdapterResponse,
   GaqManyToManyCollectionConfig,
   GaqRootQueryFilter,
 } from '@gaq';
@@ -132,7 +133,7 @@ export class SqlConverter implements GaqSqlConverter {
 
   public parseManyToManyQueryResult<T extends object>(
     result: Array<T & { __mtm_parent_id: string | number }>
-  ): Array<{ entities: T[]; parentId: string | number }> {
+  ): Array<GaqManyToManyAdapterResponse<T>> {
     return result.reduce((acc, item) => {
       const parentId = item.__mtm_parent_id;
       const entities = acc.find((i) => i.parentId === parentId)?.entities;

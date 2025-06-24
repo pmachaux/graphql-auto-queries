@@ -50,7 +50,7 @@ describe('GaqPostgresConnector', () => {
             type City @dbCollection(collectionName: "city"){
                 city_id: Int
                 city: String
-                addresses: [Address]
+                addresses: [Address] @fieldResolver(parentKey: "city_id", fieldKey: "city_id")
             }
             type Film @dbCollection(collectionName: "film"){
                 film_id: Int
@@ -319,7 +319,7 @@ describe('GaqPostgresConnector', () => {
       response.body.data?.actorGaqQueryResult.result[1].films
     ).toHaveLength(25);
   });
-  it('should be able to resolve a one to many relationship', async () => {
+  it('should be able to resolve many to one relationship', async () => {
     const queryData = {
       query: `query($filters: GaqRootFiltersInput!) {
             addressGaqQueryResult(filters: $filters) {
@@ -357,5 +357,47 @@ describe('GaqPostgresConnector', () => {
     expect(response.body.data?.addressGaqQueryResult.result[0].city.city).toBe(
       'Lethbridge'
     );
+  });
+  it('should be able to resolve one to many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            cityGaqQueryResult(filters: $filters) {
+              result {
+                city_id
+                city
+                addresses {
+                  address_id
+                  address
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'city_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 300,
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.cityGaqQueryResult.result[0].city_id).toBe(300);
+    expect(response.body.data?.cityGaqQueryResult.result[0].city).toBe(
+      'Lethbridge'
+    );
+    expect(
+      response.body.data?.cityGaqQueryResult.result[0].addresses
+    ).toHaveLength(2);
+    expect(
+      response.body.data?.cityGaqQueryResult.result[0].addresses[0].address_id
+    ).toBe(1);
+    expect(
+      response.body.data?.cityGaqQueryResult.result[0].addresses[1].address_id
+    ).toBe(3);
   });
 });

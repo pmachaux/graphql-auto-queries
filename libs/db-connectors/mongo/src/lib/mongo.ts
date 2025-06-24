@@ -127,7 +127,80 @@ const getCollectionAdapter = <T extends object>(
       config: GaqManyToManyCollectionConfig,
       opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
     ): Promise<Array<GaqManyToManyAdapterResponse<T>>> => {
-      return [];
+      try {
+        opts.logger.debug(
+          `[${opts.traceId}] Executing resolveManyToMany query on ${collectionName}`
+        );
+        const matchingIds: (string | number | ObjectId)[] = parentIds.flatMap(
+          (id: any) => {
+            if (ObjectId.isValid(id) && typeof id === 'string') {
+              return [id, new ObjectId(id)];
+            }
+            return [id];
+          }
+        );
+
+        const selectedFields = config.requestedFields.reduce((acc, field) => {
+          acc[field] = 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const pipeline = [
+          {
+            $match: {
+              [config.mtmParentKeyAlias]: {
+                $in: matchingIds,
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: config.fieldCollectionName,
+              localField: config.mtmFieldKeyAlias,
+              foreignField: config.fieldKey,
+              as: 'entities',
+              pipeline: [
+                {
+                  $project: selectedFields,
+                },
+              ],
+            },
+          },
+          { $unwind: '$entities' },
+          {
+            $group: {
+              _id: `$${config.mtmParentKeyAlias}`,
+              entities: {
+                $addToSet: '$entities',
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              parentId: { $toString: '$_id' },
+              entities: 1,
+            },
+          },
+        ];
+
+        const results = await collection.aggregate(pipeline).toArray();
+        opts.logger.debug(
+          `[${opts.traceId}] Aggregation got ${results.length} items`
+        );
+        return results.map((result) => {
+          return {
+            parentId: result.parentId,
+            entities: standardizeMongoResult<T>(result.entities),
+          };
+        });
+      } catch (e) {
+        opts.logger.error(
+          `[${opts.traceId}] Error executing resolveManyToMany query on ${collectionName}`
+        );
+        opts.logger.error(e);
+        throw e;
+      }
     },
   };
 };

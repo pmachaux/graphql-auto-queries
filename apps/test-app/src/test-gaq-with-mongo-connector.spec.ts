@@ -26,6 +26,7 @@ describe('Testing Gaq With Mongo connector', () => {
             year: Int
             released: DateTime
             comments: [Comment] @fieldResolver(parentKey: "_id", fieldKey: "movie_id")
+            runningIn: [Theater] @fieldResolver(parentKey: "_id", fieldKey: "_id") @manyToManyFieldResolver(collectionName: "movies_theaters", fieldKeyAlias: "theater_id", parentKeyAlias: "movie_id")
           }
         
           type Comment @dbCollection(collectionName: "comments"){
@@ -34,6 +35,10 @@ describe('Testing Gaq With Mongo connector', () => {
             movie_id: String
             movie: Movie @fieldResolver(parentKey: "movie_id", fieldKey: "_id")
             date: DateTime
+          }
+
+          type Theater @dbCollection(collectionName: "theaters"){
+            _id: ID
           }
   
         `,
@@ -370,5 +375,41 @@ describe('Testing Gaq With Mongo connector', () => {
       '573a1397f29313caabce8bad'
     );
   });
-  it('should be able to resolve many to many relationship', async () => {});
+  it('should be able to resolve many to many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                title
+                runningIn {
+                  _id
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: '_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: '573a1390f29313caabcd42e8',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].runningIn
+    ).toHaveLength(2);
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].runningIn[0]._id
+    ).toBe('59a47286cfa9a3a73e51e72c');
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].runningIn[1]._id
+    ).toBe('59a47286cfa9a3a73e51e72d');
+  });
 });

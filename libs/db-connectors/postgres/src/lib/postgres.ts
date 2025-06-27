@@ -1,4 +1,4 @@
-import { Client } from 'pg';
+import { Client, ClientConfig } from 'pg';
 import {
   GaqDbAdapter,
   GaqCollectionClient,
@@ -8,7 +8,6 @@ import {
   GaqManyToManyCollectionConfig,
   GaqManyToManyAdapterResponse,
 } from '@gaq';
-import { PostgresGaqDbConnectorConfig } from './interface';
 import { SqlConverter } from '@gaq/sql-converter';
 import { PostgresSqlConverter } from './postgres.sql-converter';
 
@@ -133,7 +132,7 @@ export async function getPostgresGaqDbConnector({
   config,
   logger,
 }: {
-  config: PostgresGaqDbConnectorConfig;
+  config: string | ClientConfig;
   logger: GaqLogger;
 }): Promise<{
   dbAdapter: GaqDbAdapter;
@@ -142,13 +141,13 @@ export async function getPostgresGaqDbConnector({
   const client = new Client(config);
   try {
     await client.connect();
-    logger.info(`Connected to Postgres database ${config.database}`);
+    logger.info(`Connected to Postgres database`);
     return {
       dbAdapter: getDbAdapter(client),
       client,
     };
   } catch (error) {
-    logger.error(`Error connecting to Postgres database ${config.database}`);
+    logger.error(`Error connecting to Postgres database`);
     logger.error(error);
     throw error;
   }

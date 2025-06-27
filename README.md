@@ -4,6 +4,14 @@
 It prefectly integrates with Apollo Graphql and still gives you the opportunity to customize everything you need.
 Compared to classical REST APIs, it's meant to shift the intention from 'actions' to 'combinable resources' to query.
 
+## Monorepo
+
+This repository contains several libraries for database connectors, each with its own README for details:
+
+- [MongoDB Connector](libs/db-connectors/mongo/README.md): Integrate MongoDB with the GAQ library for auto-generated GraphQL queries and resolvers.
+- [Postgres Connector](libs/db-connectors/postgres/README.md): Integrate PostgreSQL with the GAQ library, supporting advanced SQL features and relationships.
+- [SQL Converter](libs/db-connectors/sql-converter/README.md): Base utility for building custom SQL connectors for GAQ. Extend this to support your own SQL dialect or database.
+
 ## Summary
 
 - [Features](#features)

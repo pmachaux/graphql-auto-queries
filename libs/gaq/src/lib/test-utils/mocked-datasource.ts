@@ -5,7 +5,7 @@ import {
   GaqFilterQuery,
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
-import { isNullOrUndefinedOrEmptyObject } from '../utils';
+import { isNullOrUndefinedOrEmptyObject } from '@gaq/utils';
 
 const books = [
   { id: '1', title: 'The Great Gatsby', authorId: '1' },
@@ -30,6 +30,7 @@ export const getMockedDatasource = (spies?: {
   authorSpy?: Function;
   reviewSpy?: Function;
   bookCountSpy?: Function;
+  bookAuthorsSpy?: Function;
 }): GaqDbAdapter => {
   return {
     getCollectionAdapter: (collectionName: string) => {
@@ -113,6 +114,31 @@ export const getMockedDatasource = (spies?: {
             return reviews.filter((a) =>
               payload.values.includes(a[payload.field])
             );
+          },
+        };
+      }
+      if (collectionName === 'books_authors') {
+        return {
+          resolveManyToMany: async (
+            parentIds: string[],
+            config: any,
+            opts: any
+          ) => {
+            spies?.bookAuthorsSpy?.(parentIds, config, opts);
+            return authors
+              .map((a, index) => {
+                if (index === 0) {
+                  return {
+                    entities: [authors[0], authors[1]],
+                    parentId: parentIds[0],
+                  };
+                }
+                return {
+                  entities: [a],
+                  parentId: a.id,
+                };
+              })
+              .reverse();
           },
         };
       }

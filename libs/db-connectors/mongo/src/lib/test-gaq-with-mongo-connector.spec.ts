@@ -1,8 +1,8 @@
 import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
-import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { getMongoGaqDbConnector } from './mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
-import request from 'supertest';
+import * as request from 'supertest';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { getTestLogger } from '@gaq/mocks';
@@ -26,6 +26,7 @@ describe('Testing Gaq With Mongo connector', () => {
             year: Int
             released: DateTime
             comments: [Comment] @fieldResolver(parentKey: "_id", fieldKey: "movie_id")
+            runningIn: [Theater] @fieldResolver(parentKey: "_id", fieldKey: "_id") @manyToManyFieldResolver(collectionName: "movies_theaters", fieldKeyAlias: "theater_id", parentKeyAlias: "movie_id")
           }
         
           type Comment @dbCollection(collectionName: "comments"){
@@ -34,6 +35,10 @@ describe('Testing Gaq With Mongo connector', () => {
             movie_id: String
             movie: Movie @fieldResolver(parentKey: "movie_id", fieldKey: "_id")
             date: DateTime
+          }
+
+          type Theater @dbCollection(collectionName: "theaters"){
+            _id: ID
           }
   
         `,
@@ -288,5 +293,123 @@ describe('Testing Gaq With Mongo connector', () => {
 
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data?.movieGaqQueryResult.count).toEqual(21349);
+  });
+  it('should be able to resolve one to many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                title
+                comments {
+                  name
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: '_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: '573a1397f29313caabce8bad',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].comments
+    ).toHaveLength(2);
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].comments[0].name
+    ).toBe('Bronn');
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].comments[1].name
+    ).toBe('Mace Tyrell');
+  });
+  it('should be able to resolve many to one relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            commentGaqQueryResult(filters: $filters) {
+              result {
+                name
+                movie_id
+                movie {
+                  _id
+                  title
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'movie_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: '573a1397f29313caabce8bad',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.commentGaqQueryResult.result[0].movie.title
+    ).toBe('The Moon in the Gutter');
+    expect(response.body.data?.commentGaqQueryResult.result[0].name).toBe(
+      'Bronn'
+    );
+    expect(response.body.data?.commentGaqQueryResult.result[0].movie._id).toBe(
+      '573a1397f29313caabce8bad'
+    );
+    expect(response.body.data?.commentGaqQueryResult.result[1].name).toBe(
+      'Mace Tyrell'
+    );
+    expect(response.body.data?.commentGaqQueryResult.result[1].movie._id).toBe(
+      '573a1397f29313caabce8bad'
+    );
+  });
+  it('should be able to resolve many to many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            movieGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                title
+                runningIn {
+                  _id
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: '_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: '573a1390f29313caabcd42e8',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.movieGaqQueryResult.result[0].runningIn
+    ).toHaveLength(2);
+    const sortedRunningIn =
+      response.body.data?.movieGaqQueryResult.result[0].runningIn.sort((a, b) =>
+        a._id.localeCompare(b._id)
+      );
+    expect(sortedRunningIn[0]._id).toBe('59a47286cfa9a3a73e51e72c');
+    expect(sortedRunningIn[1]._id).toBe('59a47286cfa9a3a73e51e72d');
   });
 });

@@ -1,5 +1,5 @@
 import { BaseContext } from '@apollo/server';
-import { LooseAutocomplete, Prettify } from './ts-wizard.interface';
+import { LooseAutocomplete, Nullable, Prettify } from '@gaq/utils';
 import { ISchemaLevelResolver } from '@graphql-tools/utils';
 import { DocumentNode } from 'graphql';
 import type DataLoader = require('dataloader');
@@ -33,17 +33,26 @@ export type GaqServerOptions = {
   logger?: GaqLogger;
 };
 
-export type GaqFieldResolverArguments = {
-  parentKey: string;
-  fieldKey: string;
-  limit: number | null;
+export type GaqManyToManyCollectionArguments = {
+  mtmCollectionName: string;
+  mtmFieldKeyAlias: string;
+  mtmParentKeyAlias: string;
 };
+
+export type GaqFieldResolverArguments = Prettify<
+  {
+    parentKey: string;
+    fieldKey: string;
+    limit: number | null;
+  } & Nullable<GaqManyToManyCollectionArguments>
+>;
 export type GaqFieldResolverDescription = Prettify<
   GaqFieldResolverArguments & {
     isArray: boolean;
     fieldType: string;
     fieldName: string;
     dataloaderName: string;
+    mtmDataloaderName: string | null;
   }
 >;
 
@@ -109,6 +118,19 @@ export type GaqDbQueryOptions = {
   traceId: string;
 };
 
+export type GaqManyToManyCollectionConfig = Prettify<
+  GaqManyToManyCollectionArguments & {
+    requestedFields: string[];
+    fieldCollectionName: string;
+    fieldKey: string;
+  }
+>;
+
+export type GaqManyToManyAdapterResponse<T extends object> = {
+  entities: T[];
+  parentId: string | number;
+};
+
 export interface GaqCollectionClient<T extends object> {
   count(
     filters: GaqRootQueryFilter<T>,
@@ -124,6 +146,14 @@ export interface GaqCollectionClient<T extends object> {
     selectedFields: string[],
     opts: GaqDbQueryOptions
   ): Promise<T[]>;
+  resolveManyToMany(
+    parentIds: Array<string | number>,
+    config: GaqManyToManyCollectionConfig,
+    opts: {
+      traceId: string;
+      logger: GaqLogger;
+    }
+  ): Promise<Array<GaqManyToManyAdapterResponse<T>>>;
 }
 
 export interface GaqDbAdapter {

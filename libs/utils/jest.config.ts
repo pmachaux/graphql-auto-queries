@@ -1,13 +1,10 @@
-import 'dotenv/config';
-
 export default {
-  displayName: 'test-app',
+  displayName: 'utils',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/apps/test-app',
-  setupFiles: ['dotenv/config'],
+  coverageDirectory: '../../coverage/libs/utils',
 };

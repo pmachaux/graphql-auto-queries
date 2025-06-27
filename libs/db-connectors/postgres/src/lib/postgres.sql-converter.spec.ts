@@ -453,4 +453,21 @@ describe('PostgresSqlConverter', () => {
       expect(params).toEqual(['The Great Gatsby']);
     });
   });
+  describe('getManyToManyQuery', () => {
+    it('should create a query to get many-to-many relationships', () => {
+      const [sql, params] = sqlConverter.getManyToManyQuery({
+        mtmCollectionName: 'book_author',
+        fieldCollectionName: 'author',
+        requestedFields: ['id', 'name'],
+        parentIds: [1, 2, 3],
+        mtmParentKeyAlias: 'book_id',
+        mtmFieldKeyAlias: 'author_id',
+        fieldKey: 'id',
+      });
+      expect(sql).toEqual(
+        'SELECT fi.id, fi.name, mtm.book_id as "__mtm_parent_id" FROM author as fi INNER JOIN book_author as mtm ON fi.id = mtm.author_id WHERE mtm.book_id IN ($1, $2, $3)'
+      );
+      expect(params).toEqual([1, 2, 3]);
+    });
+  });
 });

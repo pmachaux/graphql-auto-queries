@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "nx test @gaq && nx test @gaq/db-connectors/mongo && nx test @gaq/db-connectors/sql-converter && nx test @gaq/db-connectors/postgres",
     "build": "nx affected:build",
     "lint": "nx affected:lint",
     "start": "nx serve test-app"
@@ -29,6 +28,7 @@
     "@types/graphql-fields": "^1.3.9",
     "@types/jest": "^29.5.12",
     "@types/node": "~18.16.9",
+    "@types/pg": "^8.15.4",
     "@types/supertest": "^6.0.3",
     "dotenv": "^16.5.0",
     "esbuild": "^0.19.2",

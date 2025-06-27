@@ -1,12 +1,13 @@
-import { Client } from 'pg';
+import { Client, ClientConfig } from 'pg';
 import {
   GaqDbAdapter,
   GaqCollectionClient,
   GaqRootQueryFilter,
   GaqDbQueryOptions,
   GaqLogger,
+  GaqManyToManyCollectionConfig,
+  GaqManyToManyAdapterResponse,
 } from '@gaq';
-import { PostgresGaqDbConnectorConfig } from './interface';
 import { SqlConverter } from '@gaq/sql-converter';
 import { PostgresSqlConverter } from './postgres.sql-converter';
 
@@ -93,6 +94,29 @@ const getCollectionAdapter = <T extends object>({
         throw error;
       }
     },
+    resolveManyToMany: async (
+      parentIds: (string | number)[],
+      config: GaqManyToManyCollectionConfig,
+      opts: Pick<GaqDbQueryOptions, 'traceId' | 'logger'>
+    ): Promise<Array<GaqManyToManyAdapterResponse<T>>> => {
+      try {
+        opts.logger.debug(
+          `[${opts.traceId}] Executing resolveManyToMany query on ${config.mtmCollectionName}`
+        );
+        const [sql, params] = sqlConverter.getManyToManyQuery({
+          ...config,
+          parentIds,
+        });
+        const result = await client.query(sql, params);
+        return sqlConverter.parseManyToManyQueryResult(result.rows);
+      } catch (error) {
+        opts.logger.error(
+          `[${opts.traceId}] Error executing resolveManyToMany query on ${config.mtmCollectionName}`
+        );
+        opts.logger.error(error);
+        throw error;
+      }
+    },
   };
 };
 
@@ -108,7 +132,7 @@ export async function getPostgresGaqDbConnector({
   config,
   logger,
 }: {
-  config: PostgresGaqDbConnectorConfig;
+  config: string | ClientConfig;
   logger: GaqLogger;
 }): Promise<{
   dbAdapter: GaqDbAdapter;
@@ -117,13 +141,13 @@ export async function getPostgresGaqDbConnector({
   const client = new Client(config);
   try {
     await client.connect();
-    logger.info(`Connected to Postgres database ${config.database}`);
+    logger.info(`Connected to Postgres database`);
     return {
       dbAdapter: getDbAdapter(client),
       client,
     };
   } catch (error) {
-    logger.error(`Error connecting to Postgres database ${config.database}`);
+    logger.error(`Error connecting to Postgres database`);
     logger.error(error);
     throw error;
   }

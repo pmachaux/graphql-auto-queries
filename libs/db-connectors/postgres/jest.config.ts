@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export default {
   displayName: 'postgressql-converter',
   preset: '../../../jest.preset.js',
@@ -7,4 +9,5 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../../coverage/libs/db-connectors/postgres',
+  setupFiles: ['dotenv/config'],
 };

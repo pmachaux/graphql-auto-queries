@@ -9,6 +9,7 @@ import {
   StringValueNode,
   visit,
   IntValueNode,
+  DirectiveNode,
 } from 'graphql';
 import {
   DetailedGaqFieldDefinition,
@@ -23,6 +24,10 @@ import {
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
 import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
+import {
+  getFieldDataloaderName,
+  getManyToManyFieldDataloaderName,
+} from '@gaq/utils';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar
@@ -34,6 +39,12 @@ directive @fieldResolver (
   parentKey: String!
   fieldKey: String!
   limit: Int
+) on FIELD_DEFINITION
+
+directive @manyToManyFieldResolver (
+  collectionName: String!
+  fieldKeyAlias: String!
+  parentKeyAlias: String!
 ) on FIELD_DEFINITION
 
 directive @dbCollection(
@@ -207,15 +218,35 @@ function extractDetailedGaqFieldDefinitions(
   );
 }
 
+function getStringArgumentFromDirective(
+  directive: DirectiveNode | null,
+  argumentName: string
+): string | null {
+  if (!directive) {
+    return null;
+  }
+  const arg = directive.arguments?.find(
+    (arg) => arg.name.value === argumentName
+  )?.value;
+  return arg ? (arg as StringValueNode).value : null;
+}
+
 function getParentAndFieldKeyFromDirective(
   field: FieldDefinitionNode
 ): GaqFieldResolverArguments {
   const fieldResolverDirective = field.directives?.find(
     (directive) => directive.name.value === 'fieldResolver'
   );
-  field.directives?.find(
-    (directive) => directive.name.value === 'fieldResolver'
+  const manyToManyFieldResolverDirective = field.directives?.find(
+    (directive) => directive.name.value === 'manyToManyFieldResolver'
   );
+
+  if (manyToManyFieldResolverDirective && !fieldResolverDirective) {
+    throw new Error(
+      `FieldResolver directive is required on same field when using @manyToManyFieldResolver directive`
+    );
+  }
+
   if (fieldResolverDirective) {
     const parentKeyArgument = fieldResolverDirective.arguments?.find(
       (arg) => arg.name.value === 'parentKey'
@@ -249,7 +280,27 @@ function getParentAndFieldKeyFromDirective(
       );
     }
 
-    return { parentKey, fieldKey, limit };
+    const mtmCollectionName = getStringArgumentFromDirective(
+      manyToManyFieldResolverDirective,
+      'collectionName'
+    );
+    const mtmFieldKeyAlias = getStringArgumentFromDirective(
+      manyToManyFieldResolverDirective,
+      'fieldKeyAlias'
+    );
+    const mtmParentKeyAlias = getStringArgumentFromDirective(
+      manyToManyFieldResolverDirective,
+      'parentKeyAlias'
+    );
+
+    return {
+      parentKey,
+      fieldKey,
+      limit,
+      mtmCollectionName,
+      mtmFieldKeyAlias,
+      mtmParentKeyAlias,
+    };
   }
   return null;
 }
@@ -311,8 +362,24 @@ const getFieldResolversFromProperties = (
       isArray: propertyToResolve.definition.isArray,
       fieldType: propertyToResolve.definition.type,
       fieldName: propertyToResolve.name,
-      dataloaderName: `${typeDefinition.name}${propertyToResolve.name}Dataloader`,
+      dataloaderName: getFieldDataloaderName({
+        typeName: typeDefinition.name,
+        fieldName: propertyToResolve.name,
+      }),
       limit: propertyToResolve.definition.fieldResolver.limit,
+      mtmCollectionName:
+        propertyToResolve.definition.fieldResolver.mtmCollectionName,
+      mtmFieldKeyAlias:
+        propertyToResolve.definition.fieldResolver.mtmFieldKeyAlias,
+      mtmParentKeyAlias:
+        propertyToResolve.definition.fieldResolver.mtmParentKeyAlias,
+      mtmDataloaderName: propertyToResolve.definition.fieldResolver
+        .mtmCollectionName
+        ? getManyToManyFieldDataloaderName({
+            typeName: typeDefinition.name,
+            fieldName: propertyToResolve.name,
+          })
+        : null,
     } satisfies GaqFieldResolverDescription;
   });
 };
@@ -411,26 +478,29 @@ export const setDbCollectionNameMap = (
   dbCollectionNameMap: Map<string, string>
 ): void => {
   visit(typeDefs, {
-    ObjectTypeDefinition(node) {
-      if (node.name.value === 'Query' || node.name.value === 'Mutation') {
-        return;
-      }
-      const dbCollectionDirective = node.directives?.find(
-        (directive) => directive.name.value === 'dbCollection'
-      );
-      if (dbCollectionDirective) {
-        const collectionNameArg = dbCollectionDirective.arguments?.find(
-          (arg) => arg.name.value === 'collectionName'
-        );
-        if (collectionNameArg?.value.kind === Kind.STRING) {
-          dbCollectionNameMap.set(
-            node.name.value,
-            collectionNameArg.value.value
-          );
+    ObjectTypeDefinition: {
+      enter(node) {
+        if (node.name.value === 'Query' || node.name.value === 'Mutation') {
+          return;
         }
-      }
+        const dbCollectionDirective = node.directives?.find(
+          (directive) => directive.name.value === 'dbCollection'
+        );
+        if (dbCollectionDirective) {
+          const collectionNameArg = dbCollectionDirective.arguments?.find(
+            (arg) => arg.name.value === 'collectionName'
+          );
+          if (collectionNameArg?.value.kind === Kind.STRING) {
+            dbCollectionNameMap.set(
+              node.name.value,
+              collectionNameArg.value.value
+            );
+          }
+        }
+      },
     },
   });
+
   return;
 };
 

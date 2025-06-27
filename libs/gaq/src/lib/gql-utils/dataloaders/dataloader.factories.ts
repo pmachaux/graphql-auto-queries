@@ -1,12 +1,9 @@
 import {
   GaqDbAdapter,
   GaqFieldResolverDescription,
-  GaqFilterComparators,
-  GaqFilterQuery,
   GaqLogger,
   GaqResolverDescription,
-  GaqRootQueryFilter,
-} from '../interfaces/common.interfaces';
+} from '../../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
 import {
   DocumentNode,
@@ -15,110 +12,13 @@ import {
   OperationDefinitionNode,
   SelectionNode,
 } from 'graphql';
-
-const matchingFnForArrays = <T extends object = object>(
-  fieldsResolverOption: GaqFieldResolverDescription,
-  queryResults: T[],
-  sourceKeys: readonly string[]
-): Array<T[]> => {
-  return sourceKeys.map((parentKey) => {
-    return (
-      queryResults.filter((r: T) => {
-        const matchingId = r[fieldsResolverOption.fieldKey as keyof T];
-        return matchingId === parentKey;
-      }) ?? []
-    );
-  });
-};
-const matchingFnForEntity = <T extends object = object>(
-  fieldsResolverOption: GaqFieldResolverDescription,
-  queryResults: T[],
-  sourceKeys: readonly string[]
-): Array<T | null> => {
-  return sourceKeys.map((parentKey) => {
-    return (
-      queryResults.find((r: T) => {
-        const matchingId = r[fieldsResolverOption.fieldKey as keyof T];
-        return matchingId === parentKey;
-      }) ?? null
-    );
-  });
-};
-
-const matchingFnForReferenceResolution = <T extends object = object>(
-  resolverDescription: GaqResolverDescription,
-  queryResults: T[],
-  sourceRecords: readonly Record<string, string>[]
-): Array<T | null> => {
-  return sourceRecords.map((sourceRecord) => {
-    const matchingRecord = queryResults.find((r: T) => {
-      return Object.keys(sourceRecord).every((key) => {
-        return r[key] === sourceRecord[key];
-      });
-    });
-    return matchingRecord ?? null;
-  });
-};
-
-export const batchLoadFnForFieldResolution =
-  ({
-    requestedFields,
-    traceId,
-  }: {
-    requestedFields: string[];
-    traceId: string;
-  }) =>
-  <T extends object = object>(
-    fieldResolver: GaqFieldResolverDescription,
-    dbCollectionNameMap: Map<string, string>,
-    gaqDbClient: GaqDbAdapter,
-    logger: GaqLogger
-  ): DataLoader.BatchLoadFn<string, T | T[] | null> => {
-    return async (keys: readonly string[]): Promise<T[] | T[][]> => {
-      const dbCollectionName = dbCollectionNameMap.get(fieldResolver.fieldType);
-      logger.debug(
-        `[${traceId}][${fieldResolver.dataloaderName}] Getting data from ${dbCollectionName} for values ${keys} with dataloader`
-      );
-      const collectionClient =
-        gaqDbClient.getCollectionAdapter(dbCollectionName);
-      if (!collectionClient) {
-        logger.warn(
-          `[${traceId}][${fieldResolver.dataloaderName}] No collection client found for ${dbCollectionName}`
-        );
-        return new Array(keys.length).fill(null);
-      }
-      try {
-        const values = await collectionClient.getValuesInField(
-          {
-            field: fieldResolver.fieldKey,
-            values: keys as any,
-          },
-          requestedFields,
-          {
-            logger,
-            traceId: fieldResolver.dataloaderName,
-            limit: fieldResolver.limit,
-          }
-        );
-        logger.debug(
-          `[${traceId}][${fieldResolver.dataloaderName}] Found ${values.length} values for ${dbCollectionName}`
-        );
-        return fieldResolver.isArray
-          ? matchingFnForArrays(fieldResolver, values, keys)
-          : matchingFnForEntity(fieldResolver, values, keys);
-      } catch (error) {
-        logger.error(
-          `[${traceId}][${fieldResolver.dataloaderName}] Error getting data from ${dbCollectionName} for keys ${keys}`
-        );
-        logger.error(
-          `[${traceId}][${fieldResolver.dataloaderName}]: ${JSON.stringify(
-            error
-          )}`
-        );
-        return new Array(keys.length).fill(null);
-      }
-    };
-  };
+import {
+  getFieldDataloaderName,
+  getManyToManyFieldDataloaderName,
+} from '@gaq/utils';
+import { batchLoadFnForReferenceResolution } from './entity-dataloader';
+import { batchLoadFnForFieldResolution } from './field-dataloader';
+import { batchLoadFnForManyToManyFieldResolution } from './mtm-dataloader';
 
 export const createFieldDataLoaderFactory = ({
   requestedFields,
@@ -141,86 +41,29 @@ export const createFieldDataLoaderFactory = ({
   );
 };
 
-export const batchLoadFnForReferenceResolution =
-  ({
+export const createManyToManyFieldDataLoaderFactory = ({
+  requestedFields,
+  traceId,
+  fieldResolver,
+  dbCollectionNameMap,
+  gaqDbClient,
+  logger,
+}: {
+  requestedFields: string[];
+  traceId: string;
+  fieldResolver: GaqFieldResolverDescription;
+  dbCollectionNameMap: Map<string, string>;
+  gaqDbClient: GaqDbAdapter;
+  logger: GaqLogger;
+}) => {
+  const batchFn = batchLoadFnForManyToManyFieldResolution({
     requestedFields,
     traceId,
-  }: {
-    requestedFields: string[];
-    traceId: string;
-  }) =>
-  <T extends object = object>(
-    resolverDescription: GaqResolverDescription,
-    dbCollectionNameMap: Map<string, string>,
-    gaqDbClient: GaqDbAdapter,
-    logger: GaqLogger
-  ): DataLoader.BatchLoadFn<Record<string, string>, T | T[] | null> => {
-    return async (
-      keyRecords: readonly Record<string, string>[]
-    ): Promise<T[] | T[][]> => {
-      const dbCollectionName = dbCollectionNameMap.get(
-        resolverDescription.linkedType
-      );
-      logger.debug(
-        `[${traceId}][${resolverDescription.federationReferenceResolver.dataloaderName}] Getting data from ${dbCollectionName} for values ${keyRecords} with dataloader`
-      );
-      const collectionClient =
-        gaqDbClient.getCollectionAdapter(dbCollectionName);
-      if (!collectionClient) {
-        logger.warn(
-          `[${traceId}][${resolverDescription.federationReferenceResolver.dataloaderName}] No collection client found for ${dbCollectionName}`
-        );
-        return new Array(keyRecords.length).fill(null);
-      }
-      const filters = keyRecords.map((record) => {
-        return {
-          and: [
-            ...Object.keys(record).map((key) => {
-              return {
-                key,
-                comparator: GaqFilterComparators.EQUAL,
-                value: record[key],
-              } satisfies GaqFilterQuery<object>;
-            }),
-          ],
-        } satisfies GaqRootQueryFilter<object>;
-      });
-      try {
-        const values = await collectionClient.getFromGaqFilters(
-          {
-            or: filters,
-          },
-          requestedFields,
-          {
-            logger,
-            traceId,
-          }
-        );
-        logger.debug(
-          `[${traceId}][${resolverDescription.federationReferenceResolver.dataloaderName}] Found ${values.length} values for ${dbCollectionName}`
-        );
-        return matchingFnForReferenceResolution(
-          resolverDescription,
-          values,
-          keyRecords
-        );
-      } catch (error) {
-        logger.error(
-          `[${traceId}][${
-            resolverDescription.federationReferenceResolver.dataloaderName
-          }] Error getting reference data from ${dbCollectionName} for keys ${JSON.stringify(
-            keyRecords
-          )}`
-        );
-        logger.error(
-          `[${traceId}][${
-            resolverDescription.federationReferenceResolver.dataloaderName
-          }]: ${JSON.stringify(error)}`
-        );
-        return new Array(keyRecords.length).fill(null);
-      }
-    };
-  };
+  });
+  return new DataLoader<any, any, any>(
+    batchFn(fieldResolver, dbCollectionNameMap, gaqDbClient, logger)
+  );
+};
 
 export const createrReferenceDataLoaderFactory = ({
   requestedFields,
@@ -280,10 +123,10 @@ const findRequestedFieldsForDataloaderFromQueryDefinition = (
       }
     }
   }
-  return requestedFields;
+  return Array.from(new Set(requestedFields));
 };
 
-const getFieldDataloadersMap = (
+const getFieldAndMTMDataloadersMap = (
   ast: DocumentNode,
   opts: {
     traceId: string;
@@ -327,8 +170,31 @@ const getFieldDataloadersMap = (
       gaqDbClient: opts.gaqDbClient,
       logger: opts.logger,
     });
-    const dataloaderName = `${resolverDescription.linkedType}${fieldResolver.fieldName}Dataloader`;
+    const dataloaderName = getFieldDataloaderName({
+      typeName: resolverDescription.linkedType,
+      fieldName: fieldResolver.fieldName,
+    });
     fieldDataloaders.set(dataloaderName, dataloader);
+
+    if (fieldResolver.mtmCollectionName) {
+      const manyToManyFieldResolver = createManyToManyFieldDataLoaderFactory({
+        requestedFields: findRequestedFieldsForDataloaderFromQueryDefinition(
+          queryDefinition,
+          resolverDescription,
+          fieldResolver
+        ),
+        traceId: opts.traceId,
+        fieldResolver,
+        dbCollectionNameMap: opts.dbCollectionNameMap,
+        gaqDbClient: opts.gaqDbClient,
+        logger: opts.logger,
+      });
+      const manyToManyDataloaderName = getManyToManyFieldDataloaderName({
+        typeName: resolverDescription.linkedType,
+        fieldName: fieldResolver.fieldName,
+      });
+      fieldDataloaders.set(manyToManyDataloaderName, manyToManyFieldResolver);
+    }
   });
 
   return { fieldDataloaders: fieldDataloaders };
@@ -411,7 +277,7 @@ export const analyzeQueryForDataloaders = (
     logger: GaqLogger;
   }
 ): { gaqDataloaders: Map<string, DataLoader<any, any, any>> } => {
-  const fieldDataloadersMap = getFieldDataloadersMap(ast, opts);
+  const fieldDataloadersMap = getFieldAndMTMDataloadersMap(ast, opts);
   const referenceDataloadersMap = getReferenceDataloadersMap(ast, opts);
 
   const gaqDataloaders = new Map<string, DataLoader<any, any, any>>();

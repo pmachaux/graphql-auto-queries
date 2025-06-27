@@ -4,6 +4,22 @@
 It prefectly integrates with Apollo Graphql and still gives you the opportunity to customize everything you need.
 Compared to classical REST APIs, it's meant to shift the intention from 'actions' to 'combinable resources' to query.
 
+## Summary
+
+- [Features](#features)
+- [Usage Example](#usage-example)
+- [Filtering & Querying](#filtering--querying)
+- [Limiting, sorting and pagination](#limiting-sorting-and-pagination)
+- [Federation and subgraph](#federation-and-subgraph)
+- [Optimized queries](#optimized-queries)
+- [Extensible with Apollo GraphQL](#extensible-with-apollo-graphql)
+- [Customizable and traceable logs](#customizable-and-traceable-logs)
+- [TypeScript Support](#typescript-support)
+- [Custom DB Adapter Interface](#custom-db-adapter-interface)
+- [Handling One-to-Many and Many-to-One Relationships with @fieldResolver](#handling-one-to-many-and-many-to-one-relationships-with-fieldresolver)
+- [Handling Many-to-Many Relationships with Intermediate Tables](#handling-many-to-many-relationships-with-intermediate-tables)
+- [License](#license)
+
 ## Features
 
 - **Auto-generates GraphQL queries and resolvers** from your type definitions
@@ -766,6 +782,128 @@ export interface GaqCollectionClient<T extends object> {
 ```
 
 You can see an example implementation in the MongoDB adapter or the test utilities (mocked datasource).
+
+## Handling One-to-Many and Many-to-One Relationships with @fieldResolver
+
+The `@fieldResolver` directive is a core feature of GAQ that enables you to easily define and resolve both one-to-many and many-to-one relationships between your GraphQL types, without writing custom resolver logic.
+
+### How it works
+
+- **One-to-Many**: Use `@fieldResolver` on a field that returns a list, specifying how the parent key relates to the child collection's field.
+- **Many-to-One**: Use `@fieldResolver` on a field that returns a single object, specifying how the parent key relates to the referenced collection's field.
+
+The directive takes two main arguments:
+
+- `parentKey`: The field in the parent type to match.
+- `fieldKey`: The field in the related type to match against.
+
+#### Example: One-to-Many
+
+Suppose you have `City` and `Address` types, where a city has many addresses:
+
+```graphql
+type City @dbCollection(collectionName: "city") {
+  id: Int
+  city: String
+  addresses: [Address] @fieldResolver(parentKey: "id", fieldKey: "city_id")
+}
+
+type Address @dbCollection(collectionName: "address") {
+  address_id: Int
+  address: String
+  city_id: Int
+}
+```
+
+Here, the `addresses` field on `City` will automatically resolve to all `Address` records where `city_id` matches the `city_id` of the parent `City`.
+
+#### Example: Many-to-One
+
+Suppose each address belongs to a single city:
+
+```graphql
+type Address @dbCollection(collectionName: "address") {
+  address_id: Int
+  address: String
+  city_id: Int
+  city: City @fieldResolver(parentKey: "city_id", fieldKey: "id")
+}
+```
+
+Here, the `city` field on `Address` will resolve to the `City` whose `city_id` matches the `city_id` of the parent `Address`.
+
+#### Note
+
+In document databases, if your entity is nested in your collection, you MUST NOT use the `fieldResolver` directive.
+Simply require the field in your query and it will be loaded automatically. Field resolvers are only needed if the required entity belongs to a different collection.
+
+### Benefits
+
+- **No custom resolver code needed**: The relationship is handled automatically by GAQ.
+- **Efficient data loading**: The library uses dataloaders to batch and cache related entity lookups, avoiding the N+1 problem.
+- **Consistent schema**: Relationships are clearly defined in your schema, making it easy to understand and maintain.
+
+## Handling Many-to-Many Relationships with Intermediate Tables
+
+Many-to-many relationships are very common in SQL databases, where an intermediate (join) table is used to associate records from two collections (tables). While less common in document databases, it is still possible if you model your data this way.
+
+GAQ provides a convenient way to handle these relationships using a combination of the `@fieldResolver` directive (as described above) and the `@manyToManyFieldResolver` directive.
+
+### When to Use @manyToManyFieldResolver
+
+- **Use this directive only when your database uses an intermediate table/collection to store the relationships.**
+- This is typical in SQL databases (e.g., a `film_actor` table linking `film` and `actor`).
+- In document databases, if all related IDs are nested within the document itself, you should NOT use this directive—just use `@fieldResolver`.
+
+### Example: SQL-Style Many-to-Many
+
+Suppose you have `Actor` and `Film` types, and a `film_actor` join table:
+
+```graphql
+type Actor @dbCollection(collectionName: "actor") {
+  id: Int
+  first_name: String
+  last_name: String
+  films: [Film]
+    @fieldResolver(parentKey: "id", fieldKey: "film_id")
+    @manyToManyFieldResolver(
+      collectionName: "film_actor"
+      fieldKeyAlias: "film_id"
+      parentKeyAlias: "actor_id"
+    )
+}
+
+type Film @dbCollection(collectionName: "film") {
+  id: Int
+  title: String
+}
+```
+
+- The `films` field on `Actor` will resolve to all `Film` records associated with the actor via the `film_actor` join table.
+- `@fieldResolver` specifies how to match the keys between `Actor` and `Film`.
+- `@manyToManyFieldResolver` tells GAQ to use the `film_actor` table to look up the relationships, using the provided aliases for the join keys.
+
+### Example: Document Database (No Join Table)
+
+If you are using a document database and all related IDs are stored in an array within the document, you do **not** need `@manyToManyFieldResolver`:
+
+```graphql
+type Actor @dbCollection(collectionName: "actor") {
+  id: Int
+  first_name: String
+  last_name: String
+  film_ids: [Int]
+  films: [Film] @fieldResolver(parentKey: "film_ids", fieldKey: "id")
+}
+```
+
+Here, the `films` field is resolved directly using the array of IDs in the document.
+
+### Summary
+
+- Use `@manyToManyFieldResolver` **only** when an intermediate table/collection is present (common in SQL).
+- For document databases with nested arrays, use only `@fieldResolver`.
+- GAQ will efficiently resolve these relationships and batch queries as needed.
 
 ## License
 

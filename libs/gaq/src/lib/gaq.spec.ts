@@ -1049,6 +1049,6 @@ describe('gaq', () => {
         title: 'The Great Gatsby',
         authors: [{ name: 'F. Scott Fitzgerald' }, { name: 'Harper Lee' }],
       });
-    }, 20000);
+    });
   });
 });

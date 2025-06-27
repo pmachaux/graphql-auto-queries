@@ -3,7 +3,7 @@ import { GaqLogger } from './lib/interfaces/common.interfaces';
 
 export const getTestLogger = (): GaqLogger => {
   return winston.createLogger({
-    level: 'debug',
+    level: 'error',
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.timestamp(),

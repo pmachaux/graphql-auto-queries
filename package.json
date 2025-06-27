@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "nx affected:test",
     "build": "nx affected:build",
     "lint": "nx affected:lint",
     "start": "nx serve test-app"

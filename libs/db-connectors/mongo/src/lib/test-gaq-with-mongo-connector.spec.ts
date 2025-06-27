@@ -1,8 +1,8 @@
 import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
-import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { getMongoGaqDbConnector } from './mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
-import request from 'supertest';
+import * as request from 'supertest';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { getTestLogger } from '@gaq/mocks';
@@ -405,11 +405,11 @@ describe('Testing Gaq With Mongo connector', () => {
     expect(
       response.body.data?.movieGaqQueryResult.result[0].runningIn
     ).toHaveLength(2);
-    expect(
-      response.body.data?.movieGaqQueryResult.result[0].runningIn[0]._id
-    ).toBe('59a47286cfa9a3a73e51e72c');
-    expect(
-      response.body.data?.movieGaqQueryResult.result[0].runningIn[1]._id
-    ).toBe('59a47286cfa9a3a73e51e72d');
+    const sortedRunningIn =
+      response.body.data?.movieGaqQueryResult.result[0].runningIn.sort((a, b) =>
+        a._id.localeCompare(b._id)
+      );
+    expect(sortedRunningIn[0]._id).toBe('59a47286cfa9a3a73e51e72c');
+    expect(sortedRunningIn[1]._id).toBe('59a47286cfa9a3a73e51e72d');
   });
 });

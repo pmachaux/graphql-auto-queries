@@ -1,4 +1,11 @@
-import { Db, MongoClient, ObjectId, WithId, Document } from 'mongodb';
+import {
+  Db,
+  MongoClient,
+  ObjectId,
+  WithId,
+  Document,
+  MongoClientOptions,
+} from 'mongodb';
 import {
   GaqDbAdapter,
   GaqCollectionClient,
@@ -215,14 +222,16 @@ const getDbAdapter = (db: Db) => {
 export async function getMongoGaqDbConnector({
   uri,
   dbName,
+  options,
 }: {
   uri: string;
   dbName: string;
+  options?: MongoClientOptions;
 }): Promise<{
   dbAdapter: GaqDbAdapter;
   client: MongoClient;
 }> {
-  const client = new MongoClient(uri);
+  const client = new MongoClient(uri, options);
   await client.connect();
 
   const db = client.db(dbName);

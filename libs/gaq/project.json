@@ -13,7 +13,15 @@
         "tsConfig": "libs/gaq/tsconfig.lib.json",
         "packageJson": "libs/gaq/package.json",
         "main": "libs/gaq/src/index.ts",
-        "assets": ["libs/gaq/*.md"]
+        "assets": ["libs/gaq/*.md"],
+        "publishable": true,
+        "importPath": "@graphql-auto-queries/core"
+      }
+    },
+    "publish": {
+      "executor": "@nx/js:publish",
+      "options": {
+        "access": "public"
       }
     }
   }

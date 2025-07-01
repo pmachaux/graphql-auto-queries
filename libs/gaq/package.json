@@ -1,10 +1,29 @@
 {
   "name": "@graphql-auto-queries/core",
   "version": "0.0.1",
-  "private": false,
+  "author": "Pierre Machaux <pierre.machaux@gmail.com>",
   "type": "commonjs",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "graphql",
+    "auto-queries",
+    "apollo",
+    "server",
+    "subgraph"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pmachaux/graphql-auto-queries.git",
+    "directory": "libs/gaq"
+  },
+  "bugs": {
+    "url": "https://github.com/pmachaux/graphql-auto-queries/issues"
+  },
+  "homepage": "https://github.com/pmachaux/graphql-auto-queries#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "graphql": "^16.0.0",
     "@apollo/server": "^4.12.2"
@@ -21,5 +40,6 @@
   "devDependencies": {
     "@apollo/subgraph": "^2.11.0",
     "supertest": "^7.0.0"
-  }
+  },
+  "license": "MIT"
 }

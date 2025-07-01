@@ -15,7 +15,6 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "mocks": ["libs/core/src/mocks.ts"],
       "@graphql-auto-queries/core": ["libs/core/src/index.ts"],
       "@graphql-auto-queries/mongo": ["libs/mongo/src/index.ts"],
       "@graphql-auto-queries/postgres": ["libs/postgres/src/index.ts"],

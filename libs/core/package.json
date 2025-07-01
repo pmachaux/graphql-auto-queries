@@ -1,6 +1,6 @@
 {
   "name": "@graphql-auto-queries/core",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "author": "Pierre Machaux <pierre.machaux@gmail.com>",
   "type": "commonjs",
   "main": "dist/index.js",

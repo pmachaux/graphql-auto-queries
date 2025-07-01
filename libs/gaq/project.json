@@ -1,5 +1,5 @@
 {
-  "name": "@gaq",
+  "name": "@graphql-auto-queries/core",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/gaq/src",
   "projectType": "library",
@@ -9,7 +9,7 @@
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/libs/gaq",
+        "outputPath": "dist/libs/core",
         "tsConfig": "libs/gaq/tsconfig.lib.json",
         "packageJson": "libs/gaq/package.json",
         "main": "libs/gaq/src/index.ts",

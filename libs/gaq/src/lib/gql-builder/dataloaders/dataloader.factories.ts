@@ -15,7 +15,7 @@ import {
 import {
   getFieldDataloaderName,
   getManyToManyFieldDataloaderName,
-} from '@gaq/utils';
+} from '../../utils';
 import { batchLoadFnForReferenceResolution } from './entity-dataloader';
 import { batchLoadFnForFieldResolution } from './field-dataloader';
 import { batchLoadFnForManyToManyFieldResolution } from './mtm-dataloader';

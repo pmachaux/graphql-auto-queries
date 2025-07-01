@@ -1,5 +1,5 @@
 import { createGraphQLError } from '@graphql-tools/utils';
-import { ArgumentNode, ASTNode, GraphQLScalarType, Kind } from 'graphql';
+import { ArgumentNode, ASTNode, GraphQLScalarType } from 'graphql';
 import {
   AVAILABLE_FILTER_COMPARATORS,
   GAQ_ROOT_QUERY_FILTER_CONDITION,

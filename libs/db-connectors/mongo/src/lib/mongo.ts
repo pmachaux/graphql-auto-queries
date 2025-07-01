@@ -13,7 +13,7 @@ import {
   GaqDbQueryOptions,
   GaqManyToManyAdapterResponse,
   GaqManyToManyCollectionConfig,
-} from '@gaq';
+} from '@graphql-auto-queries/core';
 import { getMongoFilters } from './mongo-filters.adapter';
 
 const standardizeMongoResult = <T extends object>(

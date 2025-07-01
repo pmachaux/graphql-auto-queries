@@ -1,4 +1,7 @@
-import { GaqFilterComparators, GaqRootQueryFilter } from '@gaq';
+import {
+  GaqFilterComparators,
+  GaqRootQueryFilter,
+} from '@graphql-auto-queries/core';
 import { getMongoFilters } from './mongo-filters.adapter';
 import { ObjectId } from 'mongodb';
 

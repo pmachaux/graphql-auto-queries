@@ -23,11 +23,11 @@ import {
 } from '../interfaces/common.interfaces';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
-import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
+import type { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 import {
   getFieldDataloaderName,
   getManyToManyFieldDataloaderName,
-} from '@gaq/utils';
+} from '../utils';
 
 const gaqDefaultScalarsAndInputs = `
 # Gaq custom scalar

@@ -2,8 +2,8 @@ import {
   GaqDbQueryOptions,
   GaqManyToManyCollectionConfig,
   GaqRootQueryFilter,
-} from '@gaq';
-import { Prettify } from '@gaq/utils';
+} from '@graphql-auto-queries/core';
+import { Prettify } from '@graphql-auto-queries/utils';
 
 export interface GaqSqlConverter {
   getCountQuery(args: {

@@ -11,11 +11,11 @@ The GAQ MongoDB connector allows you to quickly connect your MongoDB collections
 Install via your package manager (pnpm, npm, or yarn):
 
 ```sh
-pnpm add @gaq/mongo
+pnpm add @graphql-auto-queries/mongo
 # or
-npm install @gaq/mongo
+npm install @graphql-auto-queries/mongo
 # or
-yarn add @gaq/mongo
+yarn add @graphql-auto-queries/mongo
 ```
 
 ## Usage Example
@@ -23,8 +23,8 @@ yarn add @gaq/mongo
 Below is a minimal example of how to use the Mongo connector with the GAQ library and Apollo Server:
 
 ```typescript
-import { GaqContext, getGaqTools } from '@gaq';
-import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { GaqContext, getGaqTools } from '@graphql-auto-queries/core';
+import { getMongoGaqDbConnector } from '@graphql-auto-queries/mongo';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 

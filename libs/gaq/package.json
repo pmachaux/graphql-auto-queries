@@ -1,11 +1,25 @@
 {
-  "name": "@gaq",
+  "name": "@graphql-auto-queries/core",
   "version": "0.0.1",
-  "private": true,
+  "private": false,
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
+  "peerDependencies": {
+    "graphql": "^16.0.0",
+    "@apollo/server": "^4.12.2"
+  },
   "dependencies": {
-    "tslib": "^2.3.0"
+    "@graphql-tools/schema": "10.0.23",
+    "@graphql-tools/utils": "^10.8.6",
+    "dataloader": "^2.2.3",
+    "graphql-fields": "^2.0.3",
+    "graphql-tag": "^2.12.6",
+    "tslib": "^2.3.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@apollo/subgraph": "^2.11.0",
+    "supertest": "^7.0.0"
   }
 }

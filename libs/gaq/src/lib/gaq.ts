@@ -1,10 +1,9 @@
 import { GaqContext, GaqServerOptions } from './interfaces/common.interfaces';
-import { getTypeDefsAndResolvers } from './gql-utils/schema-analyzer';
+import { getTypeDefsAndResolvers } from './gql-builder/schema-analyzer';
 import { getDefaultLogger } from './logger';
 import { DocumentNode, parse } from 'graphql';
 import { randomUUID } from 'crypto';
-import { analyzeQueryForDataloaders } from './gql-utils/dataloaders/dataloader.factories';
-import {} from '@apollo/server';
+import { analyzeQueryForDataloaders } from './gql-builder/dataloaders/dataloader.factories';
 import type { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper';
 
 type GqlContextFn = ({ req, res }: { req: any; res: any }) => Promise<any>;

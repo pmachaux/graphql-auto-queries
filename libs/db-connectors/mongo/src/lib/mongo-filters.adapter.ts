@@ -4,8 +4,8 @@ import {
   GaqFilterQuery,
   GaqFilterQueryOnArrayElementMatch,
   GaqRootQueryFilter,
-} from '@gaq';
-import { omit, pickNonNullable } from '@gaq/utils';
+} from '@graphql-auto-queries/core';
+import { omit, pickNonNullable } from '@graphql-auto-queries/utils';
 import { Condition, ObjectId } from 'mongodb';
 
 type MongoFilterQuery<T extends object> = {

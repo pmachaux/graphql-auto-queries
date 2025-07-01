@@ -5,7 +5,7 @@ import {
   GaqFilterQuery,
   GaqRootQueryFilter,
 } from '../interfaces/common.interfaces';
-import { isNullOrUndefinedOrEmptyObject } from '@gaq/utils';
+import { isNullOrUndefinedOrEmptyObject } from '../utils';
 
 const books = [
   { id: '1', title: 'The Great Gatsby', authorId: '1' },

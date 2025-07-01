@@ -1,5 +1,5 @@
 {
-  "name": "@gaq/db-connectors/postgres",
+  "name": "@graphql-auto-queries/postgres",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/db-connectors/postgres/src",
   "projectType": "library",

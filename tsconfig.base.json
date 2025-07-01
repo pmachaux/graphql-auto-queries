@@ -15,12 +15,15 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@gaq": ["libs/gaq/src/index.ts"],
-      "@gaq/mocks": ["libs/gaq/src/mocks.ts"],
-      "@gaq/mongo": ["libs/db-connectors/mongo/src/index.ts"],
-      "@gaq/postgres": ["libs/db-connectors/postgres/src/index.ts"],
-      "@gaq/sql-converter": ["libs/db-connectors/sql-converter/src/index.ts"],
-      "@gaq/utils": ["libs/utils/src/index.ts"]
+      "@graphql-auto-queries/core": ["libs/gaq/src/index.ts"],
+      "@graphql-auto-queries/mocks": ["libs/gaq/src/mocks.ts"],
+      "@graphql-auto-queries/mongo": ["libs/db-connectors/mongo/src/index.ts"],
+      "@graphql-auto-queries/postgres": [
+        "libs/db-connectors/postgres/src/index.ts"
+      ],
+      "@graphql-auto-queries/sql-converter": [
+        "libs/db-connectors/sql-converter/src/index.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

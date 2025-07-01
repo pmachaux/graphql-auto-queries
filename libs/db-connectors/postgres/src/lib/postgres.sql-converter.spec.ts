@@ -1,4 +1,4 @@
-import { GaqFilterComparators } from '@gaq';
+import { GaqFilterComparators } from '@graphql-auto-queries/core';
 import { PostgresSqlConverter } from './postgres.sql-converter';
 
 describe('PostgresSqlConverter', () => {

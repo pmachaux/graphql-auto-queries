@@ -1,5 +1,5 @@
 {
-  "name": "@gaq/db-connectors/sql-converter",
+  "name": "@graphql-auto-queries/sql-converter",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/db-connectors/sql-converter/src",
   "projectType": "library",

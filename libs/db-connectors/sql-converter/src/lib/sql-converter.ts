@@ -5,10 +5,10 @@ import {
   GaqManyToManyAdapterResponse,
   GaqManyToManyCollectionConfig,
   GaqRootQueryFilter,
-} from '@gaq';
-import { isNullOrUndefinedOrEmptyObject } from '@gaq/utils';
+} from '@graphql-auto-queries/core';
+import { isNullOrUndefinedOrEmptyObject } from '@graphql-auto-queries/utils';
 import { GaqSqlConverter } from './interface';
-import { omit } from '@gaq/utils';
+import { omit } from '@graphql-auto-queries/utils';
 
 const isFilterQuery = (
   filter: object

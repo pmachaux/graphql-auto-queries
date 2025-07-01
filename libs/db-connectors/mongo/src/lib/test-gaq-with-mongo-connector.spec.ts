@@ -1,11 +1,15 @@
-import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
+import {
+  GaqContext,
+  GaqFilterComparators,
+  getGaqTools,
+} from '@graphql-auto-queries/core';
 import { getMongoGaqDbConnector } from './mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
 import * as request from 'supertest';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { getTestLogger } from '@gaq/mocks';
+import { getTestLogger } from '@graphql-auto-queries/mocks';
 
 describe('Testing Gaq With Mongo connector', () => {
   let server: ApolloServer<GaqContext>;

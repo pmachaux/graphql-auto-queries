@@ -15,7 +15,7 @@ You can use this library as a base class when building your own GAQ database ada
 PostgreSQL uses `$1`, `$2`, ... for parameter placeholders, while many other databases use `?`. The GAQ Postgres connector demonstrates how to override the parameterization logic:
 
 ```typescript
-import { SqlConverter } from '@gaq/sql-converter';
+import { SqlConverter } from '@graphql-auto-queries/sql-converter';
 
 export class PostgresSqlConverter extends SqlConverter {
   override getParametrizedValue(value: any, index: number) {

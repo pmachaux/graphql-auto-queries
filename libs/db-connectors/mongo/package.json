@@ -1,5 +1,5 @@
 {
-  "name": "@gaq/db-connectors/mongo",
+  "name": "@graphql-auto-queries/mongo",
   "version": "0.0.1",
   "private": true,
   "type": "commonjs",

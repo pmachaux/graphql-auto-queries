@@ -46,8 +46,8 @@ Below is a simple example on how to setup an Apollo server using GraphQL auto-qu
 In this example, we will use the native MongoDB adapter provided by our library.
 
 ```typescript
-import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
-import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { GaqContext, GaqFilterComparators, getGaqTools } from '@graphql-auto-queries/core';
+import { getMongoGaqDbConnector } from '@graphql-auto-queries/mongo';
 import { MongoClient } from 'mongodb';
 import { DateTimeResolver } from 'graphql-scalars';
 import { ApolloServer } from '@apollo/server';
@@ -417,8 +417,8 @@ import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { buildSubgraphSchema } from '@apollo/subgraph';
 import gql from 'graphql-tag';
-import { getGaqTools } from '@gaq';
-import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { getGaqTools } from '@graphql-auto-queries/core';
+import { getMongoGaqDbConnector } from '@graphql-auto-queries/mongo';
 
 const { client, dbAdapter } = await getMongoGaqDbConnector({
   uri: process.env.MONGO_URI,
@@ -572,8 +572,8 @@ import {
   SchemaMapper,
 } from '@graphql-tools/utils';
 import { defaultFieldResolver, GraphQLSchema } from 'graphql';
-import { getGaqTools } from '@gaq';
-import { getMongoGaqDbConnector } from '@gaq/mongo';
+import { getGaqTools } from '@graphql-auto-queries/core';
+import { getMongoGaqDbConnector } from '@graphql-auto-queries/mongo';
 
 const { client, dbAdapter } = await getMongoGaqDbConnector({
   uri: process.env.MONGO_URI,
@@ -700,7 +700,7 @@ The `gaq` library provides built-in, highly customizable, and traceable logging 
   If you do not provide a custom logger, `gaq` uses a default logger based on [winston](https://github.com/winstonjs/winston), which outputs colorized, timestamped logs to the console.
 
   ```ts
-  import { getDefaultLogger } from '@gaq';
+  import { getDefaultLogger } from '@graphql-auto-queries/core';
 
   const logger = getDefaultLogger();
   ```
@@ -709,7 +709,7 @@ The `gaq` library provides built-in, highly customizable, and traceable logging 
   You can inject your own logger by passing it to the `getGaqTools` configuration:
 
   ```ts
-  import { getGaqTools } from '@gaq';
+  import { getGaqTools } from '@graphql-auto-queries/core';
 
   const myLogger = {
     info: (msg) => { /* ... */ },

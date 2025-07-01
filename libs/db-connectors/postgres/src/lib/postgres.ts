@@ -7,8 +7,8 @@ import {
   GaqLogger,
   GaqManyToManyCollectionConfig,
   GaqManyToManyAdapterResponse,
-} from '@gaq';
-import { SqlConverter } from '@gaq/sql-converter';
+} from '@graphql-auto-queries/core';
+import { SqlConverter } from '@graphql-auto-queries/sql-converter';
 import { PostgresSqlConverter } from './postgres.sql-converter';
 
 const getCollectionAdapter = <T extends object>({

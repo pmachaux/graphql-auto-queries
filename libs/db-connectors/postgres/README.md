@@ -11,11 +11,11 @@ The GAQ Postgres connector allows you to connect your PostgreSQL tables to a Gra
 Install via your package manager (pnpm, npm, or yarn):
 
 ```sh
-pnpm add @gaq/postgres pg
+pnpm add @graphql-auto-queries/postgres pg
 # or
-npm install @gaq/postgres pg
+npm install @graphql-auto-queries/postgres pg
 # or
-yarn add @gaq/postgres pg
+yarn add @graphql-auto-queries/postgres pg
 ```
 
 ## Usage Example
@@ -23,8 +23,8 @@ yarn add @gaq/postgres pg
 Below is a minimal example of how to use the Postgres connector with the GAQ library and Apollo Server:
 
 ```typescript
-import { GaqContext, getGaqTools } from '@gaq';
-import { getPostgresGaqDbConnector } from '@gaq/postgres';
+import { GaqContext, getGaqTools } from '@graphql-auto-queries/core';
+import { getPostgresGaqDbConnector } from '@graphql-auto-queries/postgres';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 

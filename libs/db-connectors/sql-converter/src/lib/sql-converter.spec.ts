@@ -1,4 +1,4 @@
-import { GaqFilterComparators } from '@gaq';
+import { GaqFilterComparators } from '@graphql-auto-queries/core';
 import { SqlConverter } from './sql-converter';
 import { GaqSqlConverter } from './interface';
 

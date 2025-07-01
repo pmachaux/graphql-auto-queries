@@ -11,7 +11,7 @@ import {
   isNullOrUndefinedOrEmptyObject,
   omit,
   pickNonNullable,
-} from '@gaq/utils';
+} from '../utils';
 import { GaqErrorCodes } from '../interfaces/gaq-errors.interface';
 import { gaqNestedFilterQueryScalar } from '../scalars/gaq-nested-filters.scalar';
 import graphqlFields = require('graphql-fields');

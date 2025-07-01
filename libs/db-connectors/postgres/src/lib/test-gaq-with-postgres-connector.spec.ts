@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { ApolloServer } from '@apollo/server';
-import { GaqContext, GaqFilterComparators, getGaqTools } from '@gaq';
+import {
+  GaqContext,
+  GaqFilterComparators,
+  getGaqTools,
+} from '@graphql-auto-queries/core';
 import { Client } from 'pg';
 import * as fs from 'fs';
-import { getTestLogger } from '@gaq/mocks';
+import { getTestLogger } from '@graphql-auto-queries/mocks';
 import { DateTimeResolver } from 'graphql-scalars';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import * as request from 'supertest';

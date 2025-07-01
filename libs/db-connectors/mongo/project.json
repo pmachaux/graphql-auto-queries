@@ -1,5 +1,5 @@
 {
-  "name": "@gaq/db-connectors/mongo",
+  "name": "@graphql-auto-queries/mongo",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/db-connectors/mongo/src",
   "projectType": "library",

@@ -1,10 +1,10 @@
 {
   "name": "graphql-auto-queries",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "nx run-many --target=build",
+    "build:all": "nx run-many --target=build",
     "lint": "nx affected:lint",
     "start": "nx serve test-app",
     "test:all": "nx run-many --target=test"

@@ -1,10 +1,10 @@
 {
   "name": "@graphql-auto-queries/mongo",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "author": "Pierre Machaux <pierre.machaux@gmail.com>",
   "type": "commonjs",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/@graphql-auto-queries/mongo/index.js",
+  "types": "dist/@graphql-auto-queries/mongo/index.d.ts",
   "keywords": [
     "graphql",
     "auto-queries",
@@ -25,7 +25,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@graphql-auto-queries/core": "workspace:*",
+    "@graphql-auto-queries/core": "0.0.1",
     "mongodb": "^6.12.0"
   },
   "dependencies": {

@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "nx affected:build",
+    "build": "nx run-many --target=build",
     "lint": "nx affected:lint",
-    "start": "nx serve test-app"
+    "start": "nx serve test-app",
+    "test:all": "nx run-many --target=test"
   },
   "keywords": [],
   "author": "",

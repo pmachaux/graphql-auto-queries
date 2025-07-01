@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "author": "Pierre Machaux <pierre.machaux@gmail.com>",
   "type": "commonjs",
-  "main": "dist/@graphql-auto-queries/core/index.js",
-  "types": "dist/@graphql-auto-queries/core/index.d.ts",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "keywords": [
     "graphql",
     "auto-queries",

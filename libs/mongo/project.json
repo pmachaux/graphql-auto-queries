@@ -9,7 +9,7 @@
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/@graphql-auto-queries/mongo",
+        "outputPath": "dist/libs/mongo",
         "tsConfig": "libs/mongo/tsconfig.lib.json",
         "packageJson": "libs/mongo/package.json",
         "main": "libs/mongo/src/index.ts",

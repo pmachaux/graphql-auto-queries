@@ -1,6 +1,6 @@
 {
   "name": "@graphql-auto-queries/postgres",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "author": "Pierre Machaux <pierre.machaux@gmail.com>",
   "type": "commonjs",
   "main": "./src/index.js",
@@ -25,10 +25,11 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@graphql-auto-queries/core": "workspace:*",
+    "@graphql-auto-queries/core": "0.0.3",
     "pg": "^8.16.2"
   },
   "dependencies": {
+    "@graphql-auto-queries/sql-converter": "0.0.3",
     "tslib": "^2.3.0",
     "winston": "^3.17.0"
   },

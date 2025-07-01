@@ -1,5 +1,21 @@
 # @graphql-auto-queries/sql-converter
 
+## 0.0.3
+
+### Patch Changes
+
+- Fix dependency
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.3
+
+## 0.0.2
+
+### Patch Changes
+
+- Attempt to bump all
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.2
+
 ## 0.0.1
 
 ### Patch Changes

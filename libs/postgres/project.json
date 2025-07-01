@@ -1,0 +1,20 @@
+{
+  "name": "@graphql-auto-queries/postgres",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/postgres/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/postgres",
+        "tsConfig": "libs/postgres/tsconfig.lib.json",
+        "packageJson": "libs/postgres/package.json",
+        "main": "libs/postgres/src/index.ts",
+        "assets": ["libs/postgres/*.md"]
+      }
+    }
+  }
+}

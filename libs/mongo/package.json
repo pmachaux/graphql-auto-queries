@@ -1,6 +1,6 @@
 {
   "name": "@graphql-auto-queries/mongo",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Pierre Machaux <pierre.machaux@gmail.com>",
   "type": "commonjs",
   "main": "./src/index.js",
@@ -25,7 +25,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@graphql-auto-queries/core": "0.0.3",
+    "@graphql-auto-queries/core": "0.0.4",
     "mongodb": "^6.12.0"
   },
   "dependencies": {

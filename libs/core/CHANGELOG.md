@@ -1,5 +1,11 @@
 # @graphql-auto-queries/core
 
+## 0.0.4
+
+### Patch Changes
+
+- Fix files published in package
+
 ## 0.0.3
 
 ### Patch Changes

@@ -43,6 +43,7 @@ const books = [
   { id: '1', title: 'The Great Gatsby', authorId: '1' },
   { id: '2', title: 'To Kill a Mockingbird', authorId: '2' },
   { id: '3', title: '1984', authorId: '3' },
+  { id: '4', title: 'The Catcher in the Rye', authorId: '4' },
 ];
 
 const authors = [
@@ -469,6 +470,39 @@ describe('gaq', () => {
       await request(url).post('/').send(queryData);
 
       expect(bookSpy.mock.calls[0][0]).toEqual({});
+    });
+    it('should be able to handle when the resolved field returns null', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput!) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                title
+                authorId
+                author {
+                  name
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [
+              {
+                key: 'title',
+                comparator: GaqFilterComparators.EQUAL,
+                value: 'The Catcher in the Rye',
+              },
+            ],
+          },
+        },
+      };
+      const response = await request(url).post('/').send(queryData);
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data?.bookGaqQueryResult.result[0]).toEqual({
+        title: 'The Catcher in the Rye',
+        authorId: '4',
+        author: null,
+      });
     });
   });
   describe('solving n+1 problem', () => {

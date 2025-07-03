@@ -143,11 +143,17 @@ const getFieldResolver = (
         `Dataloader ${fieldResolverDescription.dataloaderName} not found`
       );
     }
+
+    const loaderKey = fieldResolverDescription.parentKey;
+    if (loaderKey === null) {
+      return fieldResolverDescription.isArray ? [] : null;
+    }
+
     return dataloader
-      .load(parent[fieldResolverDescription.parentKey])
+      .load(parent[loaderKey])
       .then((data) => {
         logger.debug(
-          `[${contextValue.traceId}] Data for ${fieldResolverDescription.fieldName} fetched, returning ${data.length} items`
+          `[${contextValue.traceId}] Data for ${fieldResolverDescription.fieldName} fetched`
         );
         return data;
       })

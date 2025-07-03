@@ -59,6 +59,18 @@ describe('Testing Gaq With Mongo connector', () => {
           type Theater @dbCollection(collectionName: "theaters"){
             _id: ID
           }
+
+          type User @dbCollection(collectionName: "users"){
+            _id: ID
+            email: String
+            userMetadata: UserMetadata @fieldResolver(parentKey: "email", fieldKey: "userEmail")
+          }
+
+          type UserMetadata @dbCollection(collectionName: "user_metadata"){
+            _id: ID
+            userEmail: String
+            testData: String
+          }
   
         `,
       dbAdapter,
@@ -430,5 +442,36 @@ describe('Testing Gaq With Mongo connector', () => {
       );
     expect(sortedRunningIn[0]._id).toBe('59a47286cfa9a3a73e51e72c');
     expect(sortedRunningIn[1]._id).toBe('59a47286cfa9a3a73e51e72d');
+  });
+  it('should be able to resolve one to one relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            userGaqQueryResult(filters: $filters) {
+              result {
+                _id
+                email
+                userMetadata {
+                  testData
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'email',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 'sean_bean@gameofthron.es',
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(
+      response.body.data?.userGaqQueryResult.result[0].userMetadata.testData
+    ).toBe('Some Fake Data');
   });
 });

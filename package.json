@@ -7,7 +7,13 @@
     "build:all": "nx run-many --target=build",
     "lint": "nx affected:lint",
     "start": "nx serve test-app",
-    "test:all": "nx run-many --target=test"
+    "test:all": "nx run-many --target=test",
+    "prepare-release": "changeset && changeset version && nx run-many --target=build",
+    "publish:core": "cd dist/libs/core && npm publish --access public",
+    "publish:mongo": "cd dist/libs/mongo && npm publish --access public",
+    "publish:postgres": "cd dist/libs/postgres && npm publish --access public",
+    "publish:sql-converter": "cd dist/libs/sql-converter && npm publish --access public",
+    "publish:all": "pnpm run prepare-release && pnpm run publish:core && pnpm run publish:sql-converter && pnpm run publish:mongo && pnpm run publish:postgres"
   },
   "keywords": [],
   "author": "",

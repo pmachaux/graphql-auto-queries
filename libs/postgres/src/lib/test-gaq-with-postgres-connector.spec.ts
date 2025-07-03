@@ -76,10 +76,17 @@ describe('GaqPostgresConnector', () => {
             type Film @dbCollection(collectionName: "film"){
                 film_id: Int
                 title: String
+                language_id: Int
+                language: Language @fieldResolver(parentKey: "language_id", fieldKey: "language_id")
             }
+            type Language @dbCollection(collectionName: "language"){
+                language_id: Int
+                name: String
+            }
+
           `,
       dbAdapter,
-      logger: getTestLogger(),
+      // logger: getTestLogger(),
     });
 
     server = new ApolloServer<GaqContext>({
@@ -420,5 +427,44 @@ describe('GaqPostgresConnector', () => {
     expect(
       response.body.data?.cityGaqQueryResult.result[0].addresses[1].address_id
     ).toBe(3);
+  });
+  it('should be able to resolve one to one relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+            filmGaqQueryResult(filters: $filters) {
+              result {
+                film_id
+                title
+                language_id
+                language {
+                  name
+                }
+              }
+            }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'film_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 1,
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.filmGaqQueryResult.result[0].film_id).toBe(1);
+    expect(response.body.data?.filmGaqQueryResult.result[0].title).toBe(
+      'ACADEMY DINOSAUR'
+    );
+    expect(response.body.data?.filmGaqQueryResult.result[0].language_id).toBe(
+      1
+    );
+    expect(
+      response.body.data?.filmGaqQueryResult.result[0].language.name.trim()
+    ).toBe('English');
   });
 });

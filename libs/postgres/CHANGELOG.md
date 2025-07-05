@@ -1,5 +1,14 @@
 # @graphql-auto-queries/postgres
 
+## 0.0.5
+
+### Patch Changes
+
+- Fix bug on null field resolver
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.5
+  - @graphql-auto-queries/sql-converter@0.0.5
+
 ## 0.0.4
 
 ### Patch Changes

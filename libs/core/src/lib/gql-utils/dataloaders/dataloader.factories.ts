@@ -117,7 +117,10 @@ const findRequestedFieldsForDataloaderFromQueryDefinition = (
       if (linkedTypeSelection?.selectionSet) {
         linkedTypeSelection.selectionSet.selections.forEach((selection) => {
           if (selection.kind === Kind.FIELD) {
-            requestedFields.push(selection.name.value);
+            const hasNoSubSelection = !(selection as FieldNode).selectionSet;
+            if (hasNoSubSelection) {
+              requestedFields.push(selection.name.value);
+            }
           }
         });
       }

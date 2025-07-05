@@ -48,7 +48,6 @@ describe('GaqPostgresConnector', () => {
     };
     const { client, dbAdapter } = await getPostgresGaqDbConnector({
       config,
-      logger: getTestLogger(),
     });
     postgresClient = client;
 
@@ -86,7 +85,7 @@ describe('GaqPostgresConnector', () => {
 
           `,
       dbAdapter,
-      // logger: getTestLogger(),
+      logger: getTestLogger(),
     });
 
     server = new ApolloServer<GaqContext>({
@@ -346,6 +345,59 @@ describe('GaqPostgresConnector', () => {
     expect(
       response.body.data?.actorGaqQueryResult.result[1].films
     ).toHaveLength(25);
+  });
+  it('should be able to resolve nested many-to-many relationship', async () => {
+    const queryData = {
+      query: `query($filters: GaqRootFiltersInput!) {
+                actorGaqQueryResult(filters: $filters) {
+                  result {
+                    actor_id
+                    first_name
+                    last_name
+                    last_update
+                    films {
+                      film_id
+                      language_id
+                      title
+                      language {
+                        language_id
+                        name
+                      }
+                    }
+                  }
+                }
+          }`,
+      variables: {
+        filters: {
+          and: [
+            {
+              key: 'actor_id',
+              comparator: GaqFilterComparators.EQUAL,
+              value: 2,
+            },
+          ],
+        },
+      },
+    };
+    const response = await request(url).post('/').send(queryData);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data?.actorGaqQueryResult.result[0].actor_id).toBe(2);
+    expect(
+      response.body.data?.actorGaqQueryResult.result[0].films[0].film_id
+    ).toBe(1);
+    expect(
+      response.body.data?.actorGaqQueryResult.result[0].films[0].language_id
+    ).toBe(1);
+    expect(
+      response.body.data?.actorGaqQueryResult.result[0].films[0].title
+    ).toBe('ACADEMY DINOSAUR');
+    expect(
+      response.body.data?.actorGaqQueryResult.result[0].films[0].language
+        .language_id
+    ).toBe(1);
+    expect(
+      response.body.data?.actorGaqQueryResult.result[0].films[0].language.name
+    ).toBe('English');
   });
   it('should be able to resolve many to one relationship', async () => {
     const queryData = {

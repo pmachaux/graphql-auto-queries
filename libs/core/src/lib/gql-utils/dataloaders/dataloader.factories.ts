@@ -1,8 +1,10 @@
 import {
+  GaqDataLoaderFederationSuffix,
   GaqDbAdapter,
   GaqFieldResolverDescription,
   GaqLogger,
   GaqResolverDescription,
+  SchemaIndex,
 } from '../../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
 import {
@@ -264,7 +266,7 @@ export const getReferenceDataloadersMap = (
       gaqDbClient: opts.gaqDbClient,
       logger: opts.logger,
     });
-    const dataloaderName = `${resolverDescription.linkedType}federationReferenceDataloader`;
+    const dataloaderName = `${resolverDescription.linkedType}${GaqDataLoaderFederationSuffix}`;
     referenceDataloadersMap.set(dataloaderName, dataloader);
   });
   return { referenceDataloadersMap };
@@ -278,6 +280,7 @@ export const analyzeQueryForDataloaders = (
     dbCollectionNameMap: Map<string, string>;
     gaqDbClient: GaqDbAdapter;
     logger: GaqLogger;
+    schemaIndex: SchemaIndex;
   }
 ): { gaqDataloaders: Map<string, DataLoader<any, any, any>> } => {
   const fieldDataloadersMap = getFieldAndMTMDataloadersMap(ast, opts);

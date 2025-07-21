@@ -15,11 +15,15 @@ import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
   GaqContext,
+  GaqDataLoaderFederationSuffix,
   GaqFieldResolverArguments,
   GaqFieldResolverDescription,
   GaqLogger,
+  GaqQueryResultTypeSuffix,
+  GaqQuerySuffix,
   GaqResolverDescription,
   GaqServerOptions,
+  SchemaIndex,
 } from '../interfaces/common.interfaces';
 import { ApolloServerOptions } from '@apollo/server';
 import { generateResolvers } from './resolver-builder';
@@ -403,8 +407,8 @@ export const getAutoResolversAndDataloaders = (
       typeDefinition
     );
     return {
-      queryName: `${typeDefinition.name.toLowerCase()}GaqQueryResult`,
-      resultType: `${typeDefinition.name}GaqResult`,
+      queryName: `${typeDefinition.name.toLowerCase()}${GaqQuerySuffix}`,
+      resultType: `${typeDefinition.name}${GaqQueryResultTypeSuffix}`,
       linkedType: typeDefinition.name,
       fieldResolvers,
       dbCollectionName: typeDefinition.dbCollectionName,
@@ -415,7 +419,7 @@ export const getAutoResolversAndDataloaders = (
           ? null
           : {
               keys: typeDefinition.federationKeys,
-              dataloaderName: `${typeDefinition.name}federationReferenceDataloader`,
+              dataloaderName: `${typeDefinition.name}${GaqDataLoaderFederationSuffix}`,
             },
     } satisfies GaqResolverDescription;
   });
@@ -532,4 +536,52 @@ export const getTypeDefsAndResolvers = <TContext extends GaqContext>(
     gaqResolverDescriptions,
     dbCollectionNameMap,
   };
+};
+
+export const getSchemaIndex = (typeDefs: DocumentNode): SchemaIndex => {
+  const index: SchemaIndex = {};
+
+  visit(typeDefs, {
+    ObjectTypeDefinition: {
+      enter(node) {
+        const typeName = node.name.value;
+        index[typeName] = {};
+
+        node.fields?.forEach((field) => {
+          const fieldName = field.name.value;
+          const typeInfo = extractTypeInfo(field.type);
+
+          index[typeName][fieldName] = typeInfo;
+        });
+      },
+    },
+  });
+
+  return index;
+};
+
+const extractTypeInfo = (
+  typeNode: any
+): { type: string; isNonNull: boolean; isList: boolean } => {
+  let isNonNull = false;
+  let isList = false;
+  const currentType = typeNode;
+
+  // Recursively unwrap type to handle nested lists and non-nulls
+  function unwrap(typeNode: any): any {
+    if (typeNode.kind === Kind.NON_NULL_TYPE) {
+      isNonNull = true;
+      return unwrap(typeNode.type);
+    }
+    if (typeNode.kind === Kind.LIST_TYPE) {
+      isList = true;
+      return unwrap(typeNode.type);
+    }
+    return typeNode;
+  }
+
+  const baseTypeNode = unwrap(currentType);
+  const baseType = baseTypeNode.name.value;
+
+  return { type: baseType, isNonNull, isList };
 };

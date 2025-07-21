@@ -1,5 +1,8 @@
 import { GaqContext, GaqServerOptions } from './interfaces/common.interfaces';
-import { getTypeDefsAndResolvers } from './gql-utils/schema-analyzer';
+import {
+  getSchemaIndex,
+  getTypeDefsAndResolvers,
+} from './gql-utils/schema-analyzer';
 import { getDefaultLogger } from './logger';
 import { DocumentNode, parse } from 'graphql';
 import { randomUUID } from 'crypto';
@@ -27,6 +30,8 @@ export function getGaqTools<TContext extends GaqContext>(
       dbCollectionNameMap,
     } = getTypeDefsAndResolvers(config, { logger });
 
+    const schemaIndex = getSchemaIndex(typeDefs);
+
     const withGaqContextFn: GqlContextFn = async ({ req, res }) => {
       const ast = req.body.query ? parse(req.body.query) : null;
       const traceId = randomUUID();
@@ -39,6 +44,7 @@ export function getGaqTools<TContext extends GaqContext>(
               dbCollectionNameMap,
               gaqDbClient: config.dbAdapter,
               logger,
+              schemaIndex,
             }).gaqDataloaders
           : new Map(),
         traceId,

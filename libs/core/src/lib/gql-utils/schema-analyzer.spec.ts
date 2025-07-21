@@ -2,6 +2,7 @@ import gql from 'graphql-tag';
 import {
   getGaqTypeDefsAndResolvers,
   setDbCollectionNameMap,
+  getSchemaIndex,
 } from './schema-analyzer';
 import { print } from 'graphql';
 import { GaqLogger } from '../interfaces/common.interfaces';
@@ -685,6 +686,122 @@ describe('schema-analyzer', () => {
           'FieldResolver directive is required on same field when using @manyToManyFieldResolver directive'
         );
       }
+    });
+  });
+  describe('getSchemaIndex', () => {
+    it('should build a schema index mapping type and field names to type info', () => {
+      const typeDefs = gql`
+        type Book {
+          id: ID!
+          title: String
+          authors: [Author!]!
+        }
+        type Author {
+          id: ID!
+          name: String!
+          books: [Book]
+        }
+        type Query {
+          books: [Book]
+          authors: [Author]
+        }
+      `;
+      const index = getSchemaIndex(typeDefs);
+
+      // Book fields
+      expect(index['Book']).toBeDefined();
+      expect(index['Book']['id']).toEqual({
+        type: 'ID',
+        isNonNull: true,
+        isList: false,
+      });
+      expect(index['Book']['title']).toEqual({
+        type: 'String',
+        isNonNull: false,
+        isList: false,
+      });
+      expect(index['Book']['authors']).toEqual({
+        type: 'Author',
+        isNonNull: true,
+        isList: true,
+      });
+
+      // Author fields
+      expect(index['Author']).toBeDefined();
+      expect(index['Author']['id']).toEqual({
+        type: 'ID',
+        isNonNull: true,
+        isList: false,
+      });
+      expect(index['Author']['name']).toEqual({
+        type: 'String',
+        isNonNull: true,
+        isList: false,
+      });
+      expect(index['Author']['books']).toEqual({
+        type: 'Book',
+        isNonNull: false,
+        isList: true,
+      });
+
+      // Query fields
+      expect(index['Query']).toBeDefined();
+      expect(index['Query']['books']).toEqual({
+        type: 'Book',
+        isNonNull: false,
+        isList: true,
+      });
+      expect(index['Query']['authors']).toEqual({
+        type: 'Author',
+        isNonNull: false,
+        isList: true,
+      });
+    });
+
+    it('should handle types with no fields', () => {
+      const typeDefs = gql`
+        type EmptyType
+        type Query {
+          dummy: String
+        }
+      `;
+
+      const index = getSchemaIndex(typeDefs);
+
+      expect(index['EmptyType']).toBeDefined();
+      expect(Object.keys(index['EmptyType'])).toHaveLength(0);
+      expect(index['Query']['dummy']).toEqual({
+        type: 'String',
+        isNonNull: false,
+        isList: false,
+      });
+    });
+
+    it('should handle nested non-null and list types', () => {
+      const typeDefs = gql`
+        type Example {
+          a: [String!]!
+          b: [[Int]]!
+          c: [[Boolean!]!]!
+        }
+      `;
+      const index = getSchemaIndex(typeDefs);
+
+      expect(index['Example']['a']).toEqual({
+        type: 'String',
+        isNonNull: true,
+        isList: true,
+      });
+      expect(index['Example']['b']).toEqual({
+        type: 'Int',
+        isNonNull: true,
+        isList: true,
+      });
+      expect(index['Example']['c']).toEqual({
+        type: 'Boolean',
+        isNonNull: true,
+        isList: true,
+      });
     });
   });
 });

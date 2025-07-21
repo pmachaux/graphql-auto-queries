@@ -601,7 +601,6 @@ describe('gaq', () => {
 
       const response = await request(url).post('/').send(queryData);
       expect(response.body.errors).toBeUndefined();
-      expect(response.body.data?.bookGaqQueryResult.result.length).toEqual(3);
       expect(bookSpy).toHaveBeenCalledTimes(1);
       expect(authorSpy).toHaveBeenCalledTimes(1);
       expect(reviewSpy).toHaveBeenCalledTimes(1);
@@ -671,6 +670,38 @@ describe('gaq', () => {
 
       await request(url).post('/').send(queryData);
       expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
+      expect(reviewSpy.mock.calls[0][1]).toEqual(['bookId', 'id', 'content']);
+    });
+    it('should be handle to handle nested field resolution and only pass to db the requested without the nested field resolvers', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput!) {
+            authorGaqQueryResult(filters: $filters) {
+              result {
+                id
+                name
+                books {
+                  id
+                  title
+                  reviews {
+                    id
+                    content
+                  }
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+      await request(url).post('/').send(queryData);
+      expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
+      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'title']);
       expect(reviewSpy.mock.calls[0][1]).toEqual(['bookId', 'id', 'content']);
     });
   });

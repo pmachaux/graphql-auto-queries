@@ -276,6 +276,34 @@ describe('dataloaders utils', () => {
         },
       ]);
     });
-    // it('should handle reference resolvers in the query', () => {})
+    it('should handle reference resolvers in the query', () => {
+      const query = `
+      query GetUserByReference {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+            id
+            name
+            posts {
+              id
+              title
+            }
+          }
+        }
+      }
+    `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          fieldResolver: userFieldResolver,
+          selectionFields: ['id', 'name'],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title'],
+        },
+      ]);
+    });
   });
 });

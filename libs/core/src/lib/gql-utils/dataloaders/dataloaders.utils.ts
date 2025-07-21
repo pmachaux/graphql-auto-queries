@@ -1,6 +1,5 @@
 import {
   DocumentNode,
-  FieldNode,
   Kind,
   SelectionNode,
   visit,
@@ -10,7 +9,6 @@ import {
   GaqFieldResolverDescription,
   GaqQuerySuffix,
   GaqResolverDescription,
-  SchemaIndex,
 } from '../../interfaces/common.interfaces';
 
 interface FindAllTypesInQueriesResult {

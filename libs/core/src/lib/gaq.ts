@@ -29,9 +29,6 @@ export function getGaqTools<TContext extends GaqContext>(
       gaqResolverDescriptions,
       dbCollectionNameMap,
     } = getTypeDefsAndResolvers(config, { logger });
-
-    const schemaIndex = getSchemaIndex(typeDefs);
-
     const withGaqContextFn: GqlContextFn = async ({ req, res }) => {
       const ast = req.body.query ? parse(req.body.query) : null;
       const traceId = randomUUID();
@@ -44,7 +41,6 @@ export function getGaqTools<TContext extends GaqContext>(
               dbCollectionNameMap,
               gaqDbClient: config.dbAdapter,
               logger,
-              schemaIndex,
             }).gaqDataloaders
           : new Map(),
         traceId,

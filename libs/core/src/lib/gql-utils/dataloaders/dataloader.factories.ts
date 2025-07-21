@@ -4,7 +4,6 @@ import {
   GaqFieldResolverDescription,
   GaqLogger,
   GaqResolverDescription,
-  SchemaIndex,
 } from '../../interfaces/common.interfaces';
 import DataLoader = require('dataloader');
 import {
@@ -280,7 +279,6 @@ export const analyzeQueryForDataloaders = (
     dbCollectionNameMap: Map<string, string>;
     gaqDbClient: GaqDbAdapter;
     logger: GaqLogger;
-    schemaIndex: SchemaIndex;
   }
 ): { gaqDataloaders: Map<string, DataLoader<any, any, any>> } => {
   const fieldDataloadersMap = getFieldAndMTMDataloadersMap(ast, opts);

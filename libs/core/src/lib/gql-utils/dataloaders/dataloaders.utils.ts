@@ -32,7 +32,6 @@ const resolveSelectionFieldForFieldResolver = (
 
 export const findAllTypesInQueries = (
   ast: DocumentNode,
-  schemaIndex: SchemaIndex,
   gaqResolverDescriptions: GaqResolverDescription[]
 ): FindAllTypesInQueriesResult[] => {
   const results: FindAllTypesInQueriesResult[] = [];
@@ -61,13 +60,29 @@ export const findAllTypesInQueries = (
             (resolver) =>
               resolver.linkedType === matchingFieldResolver.fieldType
           );
-          results.push({
-            fieldResolver: matchingFieldResolver,
-            selectionFields: resolveSelectionFieldForFieldResolver(
-              node.selectionSet.selections,
-              currentResolver
-            ),
-          });
+          const fieldResolverAlreadyInResults = results.find(
+            (result) => result.fieldResolver === matchingFieldResolver
+          );
+          if (fieldResolverAlreadyInResults) {
+            const newSelectionFields = Array.from(
+              new Set([
+                ...fieldResolverAlreadyInResults.selectionFields,
+                ...resolveSelectionFieldForFieldResolver(
+                  node.selectionSet.selections,
+                  currentResolver
+                ),
+              ])
+            );
+            fieldResolverAlreadyInResults.selectionFields = newSelectionFields;
+          } else {
+            results.push({
+              fieldResolver: matchingFieldResolver,
+              selectionFields: resolveSelectionFieldForFieldResolver(
+                node.selectionSet.selections,
+                currentResolver
+              ),
+            });
+          }
         }
       },
     },

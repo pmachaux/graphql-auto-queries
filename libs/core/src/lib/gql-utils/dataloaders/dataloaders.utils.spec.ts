@@ -296,8 +296,8 @@ describe('dataloaders utils', () => {
 
       expect(results).toEqual([
         {
-          fieldResolver: userFieldResolver,
           selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
         },
         {
           fieldResolver: postFieldResolver,

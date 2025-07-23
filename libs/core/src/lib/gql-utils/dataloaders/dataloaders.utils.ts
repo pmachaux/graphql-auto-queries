@@ -4,17 +4,24 @@ import {
   SelectionNode,
   visit,
   FragmentDefinitionNode,
+  FieldNode,
 } from 'graphql';
 import {
   GaqFieldResolverDescription,
   GaqQuerySuffix,
   GaqResolverDescription,
 } from '../../interfaces/common.interfaces';
+import { BREAK } from 'graphql/language/visitor';
 
-interface FindAllTypesInQueriesResult {
+type FieldResolverInQuery = {
   fieldResolver: GaqFieldResolverDescription;
   selectionFields: string[];
-}
+};
+type TypeResolverInQuery = {
+  typeResolver: GaqResolverDescription;
+  selectionFields: string[];
+};
+type FindAllTypesInQueriesResult = FieldResolverInQuery | TypeResolverInQuery;
 
 // Helper to recursively collect selection fields, including fragments
 function collectSelectionFields(
@@ -57,13 +64,69 @@ function collectSelectionFields(
   return fields;
 }
 
+export const getReferenceEntityNode = (ast: DocumentNode): FieldNode | null => {
+  let referenceEntityNode: FieldNode | null = null;
+  visit(ast, {
+    Field: {
+      enter(node) {
+        if (node.name.value.endsWith(GaqQuerySuffix)) {
+          referenceEntityNode = node;
+          return BREAK;
+        }
+      },
+    },
+  });
+  return referenceEntityNode;
+};
+
+const getTypeResolverFromEntityNode = (
+  entityNode: FieldNode,
+  gaqResolverDescriptions: GaqResolverDescription[]
+): FindAllTypesInQueriesResult[] => {
+  if (!entityNode.selectionSet) return [];
+
+  const results: FindAllTypesInQueriesResult[] = [];
+
+  for (const selection of entityNode.selectionSet.selections) {
+    if (selection.kind === 'InlineFragment' && selection.typeCondition) {
+      const typeName = selection.typeCondition.name.value;
+      // Collect all field names at this level (ignore nested fields for now)
+      const selectionFields: string[] = [];
+      for (const fieldSel of selection.selectionSet.selections) {
+        if (fieldSel.kind === 'Field') {
+          const hasFieldResolver = gaqResolverDescriptions.some((resolver) =>
+            resolver.fieldResolvers.some(
+              (fieldResolver) =>
+                fieldResolver.fieldName === (fieldSel as FieldNode).name.value
+            )
+          );
+          if (!hasFieldResolver) {
+            selectionFields.push(fieldSel.name.value);
+          }
+        }
+      }
+      // Find the resolver description for this type
+      const typeResolver = gaqResolverDescriptions.find(
+        (resolver) => resolver.linkedType === typeName
+      );
+      if (typeResolver) {
+        results.push({
+          typeResolver,
+          selectionFields,
+        });
+      }
+    }
+  }
+
+  return results;
+};
+
 export const findAllTypesInQueries = (
   ast: DocumentNode,
   gaqResolverDescriptions: GaqResolverDescription[]
 ): FindAllTypesInQueriesResult[] => {
-  const results: FindAllTypesInQueriesResult[] = [];
+  let results: FindAllTypesInQueriesResult[] = [];
   let currentResolver: GaqResolverDescription | null = null;
-
   // Build a fragment map for quick lookup
   const fragmentMap: Record<string, FragmentDefinitionNode> = {};
   ast.definitions.forEach((def) => {
@@ -75,6 +138,13 @@ export const findAllTypesInQueries = (
   visit(ast, {
     Field: {
       enter(node) {
+        if (node.name.value === '_entities') {
+          results = getTypeResolverFromEntityNode(
+            node,
+            gaqResolverDescriptions
+          );
+          return BREAK;
+        }
         const isGaqQueryField = node.name.value.endsWith(GaqQuerySuffix);
         if (isGaqQueryField) {
           const gaqQueryFieldResolver = gaqResolverDescriptions.find(
@@ -95,7 +165,10 @@ export const findAllTypesInQueries = (
               resolver.linkedType === matchingFieldResolver.fieldType
           );
           const fieldResolverAlreadyInResults = results.find(
-            (result) => result.fieldResolver === matchingFieldResolver
+            (result) =>
+              (result as FieldResolverInQuery).fieldResolver &&
+              (result as FieldResolverInQuery).fieldResolver ===
+                matchingFieldResolver
           );
           const collectedFields = collectSelectionFields(
             node.selectionSet.selections,

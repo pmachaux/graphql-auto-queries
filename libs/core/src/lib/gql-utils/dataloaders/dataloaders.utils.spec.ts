@@ -305,5 +305,69 @@ describe('dataloaders utils', () => {
         },
       ]);
     });
+    it('should handle reference resolvers in the query when multiple representations are provided', () => {
+      const query = `
+      query GetUserByReference {
+        _entities(representations: [{ __typename: "User", id: "123" }, { __typename: "User", id: "456" }]) {
+          ... on User {
+            id
+            name
+          }
+        }
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+
+    it('should handle reference resolvers in the query when multiple representations are provided with distinct types', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(
+          representations: [
+            { __typename: "User", id: "123" },
+            { __typename: "Post", id: "456" }
+          ]
+        ) {
+          ... on User {
+            id
+            name
+            posts {
+              id
+              title
+            }
+          }
+          ... on Post {
+            id
+            title
+          }
+        }
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title'],
+        },
+        {
+          selectionFields: ['id', 'title'],
+          typeResolver: gaqResolverDescriptions[1],
+        },
+      ]);
+    });
   });
 });

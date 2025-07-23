@@ -87,6 +87,70 @@ const getTypeResolverFromEntityNode = (
 
   const results: FindAllTypesInQueriesResult[] = [];
 
+  // Helper to recursively collect nested field resolvers
+  function collectNestedFieldResolvers(
+    selections: readonly any[],
+    currentResolver: GaqResolverDescription | null
+  ) {
+    for (const sel of selections) {
+      if (sel.kind === 'Field' && currentResolver) {
+        const matchingFieldResolver = currentResolver.fieldResolvers.find(
+          (fieldResolver) => fieldResolver.fieldName === sel.name.value
+        );
+        if (matchingFieldResolver) {
+          // Collect direct fields for this field resolver
+          const nestedFields: string[] = [];
+          if (sel.selectionSet && sel.selectionSet.selections.length > 0) {
+            for (const nestedSel of sel.selectionSet.selections) {
+              if (nestedSel.kind === 'Field') {
+                // Only collect fields that do not have their own field resolver
+                const hasNestedFieldResolver = gaqResolverDescriptions.some(
+                  (resolver) =>
+                    resolver.fieldResolvers.some(
+                      (fr) => fr.fieldName === nestedSel.name.value
+                    )
+                );
+                if (!hasNestedFieldResolver) {
+                  nestedFields.push(nestedSel.name.value);
+                }
+              }
+            }
+          }
+          results.push({
+            fieldResolver: matchingFieldResolver,
+            selectionFields: nestedFields,
+          });
+          // Recurse if there are further nested selections
+          if (sel.selectionSet && sel.selectionSet.selections.length > 0) {
+            // Find the resolver for the nested type
+            const nextResolver = gaqResolverDescriptions.find(
+              (resolver) =>
+                resolver.linkedType === matchingFieldResolver.fieldType
+            );
+            if (nextResolver) {
+              collectNestedFieldResolvers(
+                sel.selectionSet.selections,
+                nextResolver
+              );
+            }
+          }
+        }
+      } else if (sel.kind === 'InlineFragment' && sel.typeCondition) {
+        // Recurse into inline fragments
+        const typeName = sel.typeCondition.name.value;
+        const typeResolver = gaqResolverDescriptions.find(
+          (resolver) => resolver.linkedType === typeName
+        );
+        if (typeResolver) {
+          collectNestedFieldResolvers(
+            sel.selectionSet.selections,
+            typeResolver
+          );
+        }
+      }
+    }
+  }
+
   for (const selection of entityNode.selectionSet.selections) {
     if (selection.kind === 'InlineFragment' && selection.typeCondition) {
       const typeName = selection.typeCondition.name.value;
@@ -114,6 +178,11 @@ const getTypeResolverFromEntityNode = (
           typeResolver,
           selectionFields,
         });
+        // Now handle nested fields with field resolvers
+        collectNestedFieldResolvers(
+          selection.selectionSet.selections,
+          typeResolver
+        );
       }
     }
   }

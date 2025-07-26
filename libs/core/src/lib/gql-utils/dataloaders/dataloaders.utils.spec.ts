@@ -250,12 +250,12 @@ describe('dataloaders utils', () => {
       fragment AuthorFields on Author {
         name
         profile {
+          id
           ...ProfileFields
         }
       }
 
       fragment ProfileFields on Profile {
-        id
         bio
       }
     `;
@@ -315,6 +315,7 @@ describe('dataloaders utils', () => {
           }
         }
       }
+
       `;
       const ast = parse(query);
       const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
@@ -366,6 +367,116 @@ describe('dataloaders utils', () => {
         {
           selectionFields: ['id', 'title'],
           typeResolver: gaqResolverDescriptions[1],
+        },
+      ]);
+    });
+    it('should handle nested inline fragments in reference resolvers in the query', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+            id
+            name
+            posts {
+              id
+              title
+              author {
+                id
+                name
+                ... on Profile {
+                  id
+                  bio
+                }
+              }
+            }
+          }
+        }
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title'],
+        },
+        {
+          fieldResolver: userFieldResolver,
+          selectionFields: ['id', 'name'],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio'],
+        },
+      ]);
+    });
+    it('should handle nested spread fragments in reference resolvers in the query', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+            id
+            name
+            profile {
+              id
+              ...ProfileFields
+            }
+          }
+        }
+      }
+      fragment ProfileFields on Profile {
+        bio
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio'],
+        },
+      ]);
+    });
+    it('should handle nested spread fragments right below the reference resolver in the query', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+          id
+            ...UserFields
+          }
+        }
+      }
+      fragment UserFields on User {
+        name
+        profile {
+          ...ProfileFields
+        }
+      }
+      fragment ProfileFields on Profile {
+        id
+        bio
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio'],
         },
       ]);
     });

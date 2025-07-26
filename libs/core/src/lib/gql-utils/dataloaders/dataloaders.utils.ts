@@ -138,6 +138,18 @@ function collectNestedFieldResolvers(
           );
         }
       }
+    } else if (sel.kind === 'FragmentSpread' && sel.name.value) {
+      const fragment = fragmentMap[sel.name.value];
+      if (fragment) {
+        collectNestedFieldResolvers(
+          fragment.selectionSet.selections,
+          currentResolver,
+          gaqResolverDescriptions,
+          fragmentMap,
+          results,
+          true
+        );
+      }
     }
   }
 }

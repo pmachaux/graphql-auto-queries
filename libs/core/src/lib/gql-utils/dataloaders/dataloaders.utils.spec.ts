@@ -250,12 +250,12 @@ describe('dataloaders utils', () => {
       fragment AuthorFields on Author {
         name
         profile {
-          id
           ...ProfileFields
         }
       }
 
       fragment ProfileFields on Profile {
+        id
         bio
       }
     `;
@@ -422,6 +422,10 @@ describe('dataloaders utils', () => {
           ... on User {
             id
             name
+            posts {
+              id
+              title
+            }
             profile {
               id
               ...ProfileFields
@@ -430,6 +434,7 @@ describe('dataloaders utils', () => {
         }
       }
       fragment ProfileFields on Profile {
+        id
         bio
       }
       `;
@@ -439,6 +444,10 @@ describe('dataloaders utils', () => {
         {
           selectionFields: ['id', 'name'],
           typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title'],
         },
         {
           fieldResolver: profileFieldResolver,

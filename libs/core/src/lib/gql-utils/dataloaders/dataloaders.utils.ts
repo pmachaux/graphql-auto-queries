@@ -117,6 +117,17 @@ function collectNestedFieldResolverFromInlineFragment(
   }
 }
 
+function getRemaininFieldsInSelection(
+  alreadyCollectedFields: string[],
+  selections: readonly SelectionNode[]
+): readonly SelectionNode[] {
+  return selections.filter((selection) => {
+    return !alreadyCollectedFields.some(
+      (f) => f === (selection as FieldNode).name.value
+    );
+  });
+}
+
 // Helper to recursively collect nested field resolvers
 function collectNestedFieldResolvers(
   selections: readonly any[],
@@ -312,7 +323,10 @@ function addTypeResolverToResultSet(
     typeResolverAlreadyInResults.selectionFields = newSelectionFields;
     return results;
   }
-  results.push({ typeResolver, selectionFields });
+  results.push({
+    typeResolver,
+    selectionFields: Array.from(new Set(selectionFields)),
+  });
   return results;
 }
 
@@ -334,7 +348,10 @@ function addFieldResolverToResultSet(
     fieldResolverAlreadyInResults.selectionFields = newSelectionFields;
     return results;
   }
-  results.push({ fieldResolver, selectionFields });
+  results.push({
+    fieldResolver,
+    selectionFields: Array.from(new Set(selectionFields)),
+  });
   return results;
 }
 

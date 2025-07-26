@@ -179,52 +179,6 @@ describe('dataloaders utils', () => {
         },
       ]);
     });
-
-    it('should support inline fragments in the query', () => {
-      const query = `
-        query {
-          userGaqQueryResult(filters: $filters) {
-            result {
-              id
-              name
-              ... on User {
-                posts {
-                  id
-                  title
-                  author {
-                    ... on Author {
-                      name
-                      profile {
-                        ... on Profile {
-                          id
-                          bio
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      `;
-      const ast = parse(query);
-      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
-      expect(results).toEqual([
-        {
-          fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
-        },
-        {
-          fieldResolver: userFieldResolver,
-          selectionFields: ['name'],
-        },
-        {
-          fieldResolver: profileFieldResolver,
-          selectionFields: ['id', 'bio'],
-        },
-      ]);
-    });
     it('should support spread fragments in the query', () => {
       const query = `
       query UserQuery($filters: UserFilters) {
@@ -367,51 +321,6 @@ describe('dataloaders utils', () => {
         {
           selectionFields: ['id', 'title'],
           typeResolver: gaqResolverDescriptions[1],
-        },
-      ]);
-    });
-    it('should handle nested inline fragments in reference resolvers in the query', () => {
-      const query = `
-      query GetReferenceEntities {
-        _entities(representations: [{ __typename: "User", id: "123" }]) {
-          ... on User {
-            id
-            name
-            posts {
-              id
-              title
-              author {
-                id
-                name
-                ... on Profile {
-                  id
-                  bio
-                }
-              }
-            }
-          }
-        }
-      }
-      `;
-      const ast = parse(query);
-      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
-
-      expect(results).toEqual([
-        {
-          selectionFields: ['id', 'name'],
-          typeResolver: gaqResolverDescriptions[0],
-        },
-        {
-          fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
-        },
-        {
-          fieldResolver: userFieldResolver,
-          selectionFields: ['id', 'name'],
-        },
-        {
-          fieldResolver: profileFieldResolver,
-          selectionFields: ['id', 'bio'],
         },
       ]);
     });

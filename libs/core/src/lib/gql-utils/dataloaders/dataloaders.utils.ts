@@ -39,15 +39,6 @@ function collectSelectionFields(
       if (!hasFieldResolver) {
         fields.push(selection.name.value);
       }
-    } else if (selection.kind === Kind.INLINE_FRAGMENT) {
-      // Inline fragment: recurse into its selection set
-      fields = fields.concat(
-        collectSelectionFields(
-          selection.selectionSet.selections,
-          resolver,
-          fragmentMap
-        )
-      );
     } else if (selection.kind === Kind.FRAGMENT_SPREAD) {
       // Fragment spread: look up the fragment and recurse
       const fragment = fragmentMap[selection.name.value];
@@ -80,50 +71,13 @@ export const getReferenceEntityNode = (ast: DocumentNode): FieldNode | null => {
   return referenceEntityNode;
 };
 
-function collectNestedFieldResolverFromInlineFragment(
-  node: InlineFragmentNode,
-  currentResolver: GaqResolverDescription | null,
-  gaqResolverDescriptions: GaqResolverDescription[],
-  fragmentMap: Record<string, FragmentDefinitionNode>,
-  results: FindAllTypesInQueriesResult[]
-) {
-  const fieldResolver = currentResolver?.fieldResolvers.find((r) => {
-    return r.fieldType === node.typeCondition.name.value;
-  });
-  if (fieldResolver) {
-    addFieldResolverToResultSet(
-      results,
-      fieldResolver,
-      collectSelectionFields(
-        node.selectionSet.selections,
-        currentResolver,
-        fragmentMap
-      )
-    );
-  }
-  if (node.selectionSet) {
-    const newCurrentResolver = gaqResolverDescriptions.find((r) => {
-      return r.linkedType === node.typeCondition.name.value;
-    });
-    if (newCurrentResolver) {
-      collectNestedFieldResolvers(
-        node.selectionSet.selections,
-        newCurrentResolver,
-        gaqResolverDescriptions,
-        fragmentMap,
-        results
-      );
-    }
-  }
-}
-
-function getRemaininFieldsInSelection(
+function getRemainingFieldsInSelection(
   alreadyCollectedFields: string[],
   selections: readonly SelectionNode[]
 ): readonly SelectionNode[] {
   return selections.filter((selection) => {
     return !alreadyCollectedFields.some(
-      (f) => f === (selection as FieldNode).name.value
+      (f) => f === (selection as FieldNode).name?.value
     );
   });
 }
@@ -134,124 +88,55 @@ function collectNestedFieldResolvers(
   currentResolver: GaqResolverDescription | null,
   gaqResolverDescriptions: GaqResolverDescription[],
   fragmentMap: Record<string, FragmentDefinitionNode>,
-  results: FindAllTypesInQueriesResult[]
+  results: FindAllTypesInQueriesResult[],
+  skipTypeResolver: boolean
 ) {
-  for (const sel of selections) {
+  const collectedFields = collectSelectionFields(
+    selections,
+    currentResolver,
+    fragmentMap
+  );
+  if (currentResolver && !skipTypeResolver) {
+    addTypeResolverToResultSet(results, currentResolver, collectedFields);
+  }
+  const remainingSelections = getRemainingFieldsInSelection(
+    collectedFields,
+    selections
+  );
+  for (const sel of remainingSelections) {
     if (sel.kind === 'Field' && currentResolver) {
       const matchingFieldResolver = currentResolver.fieldResolvers.find(
         (fieldResolver) => fieldResolver.fieldName === sel.name.value
       );
-      if (matchingFieldResolver) {
-        // Collect direct fields for this field resolver
-        let nestedFields: string[] = [];
-        if (sel.selectionSet && sel.selectionSet.selections.length > 0) {
-          for (const nestedSel of sel.selectionSet.selections) {
-            if (nestedSel.kind === 'Field') {
-              // Only collect fields that do not have their own field resolver
-              const hasNestedFieldResolver = gaqResolverDescriptions.some(
-                (resolver) =>
-                  resolver.fieldResolvers.some(
-                    (fr) => fr.fieldName === nestedSel.name.value
-                  )
-              );
-              if (!hasNestedFieldResolver) {
-                nestedFields.push(nestedSel.name.value);
-              }
-            } else if (nestedSel.kind === 'FragmentSpread') {
-              const fragmentName = nestedSel.name.value;
-              const fragment = fragmentMap[fragmentName];
-              const newCurrentResolver = gaqResolverDescriptions.find(
-                (resolver) =>
-                  resolver.linkedType === fragment.typeCondition.name.value
-              );
-              if (fragment) {
-                nestedFields = nestedFields.concat(
-                  collectSelectionFields(
-                    fragment.selectionSet.selections,
-                    newCurrentResolver,
-                    fragmentMap
-                  )
-                );
-                collectNestedFieldResolvers(
-                  fragment.selectionSet.selections,
-                  newCurrentResolver,
-                  gaqResolverDescriptions,
-                  fragmentMap,
-                  results
-                );
-              }
-            }
-          }
-        }
+      const nextResolver = gaqResolverDescriptions.find(
+        (resolver) => resolver.linkedType === matchingFieldResolver.fieldType
+      );
+      if (matchingFieldResolver && nextResolver) {
+        const fieldResolverCollectedFields = collectSelectionFields(
+          sel.selectionSet.selections,
+          nextResolver,
+          fragmentMap
+        );
         addFieldResolverToResultSet(
           results,
           matchingFieldResolver,
-          nestedFields
+          fieldResolverCollectedFields
         );
-        // Recurse if there are further nested selections
-        if (sel.selectionSet && sel.selectionSet.selections.length > 0) {
-          // Find the resolver for the nested type
-          const nextResolver = gaqResolverDescriptions.find(
-            (resolver) =>
-              resolver.linkedType === matchingFieldResolver.fieldType
+        const remainingFieldResolversSelections = getRemainingFieldsInSelection(
+          fieldResolverCollectedFields,
+          sel.selectionSet.selections
+        );
+        // Collect direct fields for this field resolver
+        if (remainingFieldResolversSelections.length > 0) {
+          collectNestedFieldResolvers(
+            remainingFieldResolversSelections,
+            nextResolver,
+            gaqResolverDescriptions,
+            fragmentMap,
+            results,
+            true
           );
-          if (nextResolver) {
-            collectNestedFieldResolvers(
-              sel.selectionSet.selections,
-              nextResolver,
-              gaqResolverDescriptions,
-              fragmentMap,
-              results
-            );
-          }
         }
-      }
-    } else if (sel.kind === 'InlineFragment' && sel.typeCondition) {
-      // Recurse into inline fragments
-      collectNestedFieldResolverFromInlineFragment(
-        sel,
-        currentResolver,
-        gaqResolverDescriptions,
-        fragmentMap,
-        results
-      );
-    }
-    // Handle FragmentSpread nodes
-    else if (sel.kind === 'FragmentSpread') {
-      const fragmentName = sel.name.value;
-      const fragment = fragmentMap[fragmentName];
-      if (fragment) {
-        // const collectedFields = collectSelectionFields(
-        //   fragment.selectionSet.selections,
-        //   currentResolver,
-        //   fragmentMap
-        // );
-        // const matchtingFieldResolver = currentResolver?.fieldResolvers.find(
-        //   (fieldResolver) =>
-        //     fieldResolver.fieldName === fragment.typeCondition.name.value
-        // );
-        // if (matchtingFieldResolver) {
-        //   addFieldResolverToResultSet(
-        //     results,
-        //     matchtingFieldResolver,
-        //     collectedFields
-        //   );
-        // } else {
-        //   addTypeResolverToResultSet(results, currentResolver, collectedFields);
-        // }
-
-        const newCurrentResolver = gaqResolverDescriptions.find(
-          (resolver) =>
-            resolver.linkedType === fragment.typeCondition.name.value
-        );
-
-        collectNestedFieldResolvers(
-          fragment.selectionSet.selections,
-          newCurrentResolver,
-          gaqResolverDescriptions,
-          fragmentMap,
-          results
-        );
       }
     }
   }
@@ -296,7 +181,8 @@ const getTypeResolverFromEntityNode = (
           typeResolver,
           gaqResolverDescriptions,
           fragmentMap,
-          results
+          results,
+          false
         );
       }
     }

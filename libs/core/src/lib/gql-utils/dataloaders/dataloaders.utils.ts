@@ -5,7 +5,6 @@ import {
   visit,
   FragmentDefinitionNode,
   FieldNode,
-  InlineFragmentNode,
 } from 'graphql';
 import {
   GaqFieldResolverDescription,
@@ -13,16 +12,12 @@ import {
   GaqResolverDescription,
 } from '../../interfaces/common.interfaces';
 import { BREAK } from 'graphql/language/visitor';
-
-type FieldResolverInQuery = {
-  fieldResolver: GaqFieldResolverDescription;
-  selectionFields: string[];
-};
-type TypeResolverInQuery = {
-  typeResolver: GaqResolverDescription;
-  selectionFields: string[];
-};
-type FindAllTypesInQueriesResult = FieldResolverInQuery | TypeResolverInQuery;
+import {
+  FieldResolverInQuery,
+  FindAllTypesInQueriesResult,
+  TypeResolverInQuery,
+} from './dataloaders.interface';
+import { isFieldResolverInQuery } from '../../utils';
 
 // Helper to recursively collect selection fields, including fragments
 function collectSelectionFields(
@@ -120,6 +115,7 @@ function collectNestedFieldResolvers(
         addFieldResolverToResultSet(
           results,
           matchingFieldResolver,
+          currentResolver,
           fieldResolverCollectedFields
         );
         const remainingFieldResolversSelections = getRemainingFieldsInSelection(
@@ -231,11 +227,14 @@ function addTypeResolverToResultSet(
 function addFieldResolverToResultSet(
   results: FindAllTypesInQueriesResult[],
   fieldResolver: GaqFieldResolverDescription,
+  parentResolver: GaqResolverDescription,
   selectionFields: string[]
 ) {
   const fieldResolverAlreadyInResults = results.find((result) => {
-    return (result as FieldResolverInQuery).fieldResolver === fieldResolver;
-  }) as FieldResolverInQuery | undefined;
+    return (
+      isFieldResolverInQuery(result) && result.fieldResolver === fieldResolver
+    );
+  });
   if (fieldResolverAlreadyInResults) {
     const newSelectionFields = Array.from(
       new Set([
@@ -249,6 +248,7 @@ function addFieldResolverToResultSet(
   results.push({
     fieldResolver,
     selectionFields: Array.from(new Set(selectionFields)),
+    parentResolver,
   });
   return results;
 }
@@ -293,20 +293,22 @@ export const findAllTypesInQueries = (
           (fieldResolver) => fieldResolver.fieldName === node.name.value
         );
         if (hasSelectionFields && matchingFieldResolver) {
-          currentResolver = gaqResolverDescriptions.find(
+          const nextResolver = gaqResolverDescriptions.find(
             (resolver) =>
               resolver.linkedType === matchingFieldResolver.fieldType
           );
           const collectedFields = collectSelectionFields(
             node.selectionSet.selections,
-            currentResolver,
+            nextResolver,
             fragmentMap
           );
           addFieldResolverToResultSet(
             results,
             matchingFieldResolver,
+            currentResolver,
             collectedFields
           );
+          currentResolver = nextResolver;
         }
       },
     },

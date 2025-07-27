@@ -1,8 +1,5 @@
 import { GaqContext, GaqServerOptions } from './interfaces/common.interfaces';
-import {
-  getSchemaIndex,
-  getTypeDefsAndResolvers,
-} from './gql-utils/schema-analyzer';
+import { getTypeDefsAndResolvers } from './gql-utils/schema-analyzer';
 import { getDefaultLogger } from './logger';
 import { DocumentNode, parse } from 'graphql';
 import { randomUUID } from 'crypto';

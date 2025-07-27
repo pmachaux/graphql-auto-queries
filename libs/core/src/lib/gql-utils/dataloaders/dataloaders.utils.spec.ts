@@ -116,14 +116,17 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: postFieldResolver,
           selectionFields: ['id', 'title'],
+          parentResolver: gaqResolverDescriptions[0],
         },
         {
           fieldResolver: userFieldResolver,
           selectionFields: ['id', 'name'],
+          parentResolver: gaqResolverDescriptions[1],
         },
         {
           fieldResolver: profileFieldResolver,
           selectionFields: ['id', 'bio'],
+          parentResolver: gaqResolverDescriptions[0],
         },
       ]);
     });
@@ -168,14 +171,17 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: postFieldResolver,
           selectionFields: ['id', 'title'],
+          parentResolver: gaqResolverDescriptions[0],
         },
         {
           fieldResolver: userFieldResolver,
           selectionFields: ['name', 'id'],
+          parentResolver: gaqResolverDescriptions[1],
         },
         {
           fieldResolver: profileFieldResolver,
           selectionFields: ['bio'],
+          parentResolver: gaqResolverDescriptions[0],
         },
       ]);
     });
@@ -219,14 +225,17 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: postFieldResolver,
           selectionFields: ['id', 'title'],
+          parentResolver: gaqResolverDescriptions[0],
         },
         {
           fieldResolver: userFieldResolver,
           selectionFields: ['name'],
+          parentResolver: gaqResolverDescriptions[1],
         },
         {
           fieldResolver: profileFieldResolver,
           selectionFields: ['id', 'bio'],
+          parentResolver: gaqResolverDescriptions[0],
         },
       ]);
     });
@@ -256,6 +265,7 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: postFieldResolver,
           selectionFields: ['id', 'title'],
+          parentResolver: gaqResolverDescriptions[0],
         },
       ]);
     });
@@ -317,6 +327,7 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: postFieldResolver,
           selectionFields: ['id', 'title'],
+          parentResolver: gaqResolverDescriptions[0],
         },
         {
           selectionFields: ['id', 'title'],
@@ -357,10 +368,12 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: postFieldResolver,
           selectionFields: ['id', 'title'],
+          parentResolver: gaqResolverDescriptions[0],
         },
         {
           fieldResolver: profileFieldResolver,
           selectionFields: ['id', 'bio'],
+          parentResolver: gaqResolverDescriptions[0],
         },
       ]);
     });
@@ -395,6 +408,7 @@ describe('dataloaders utils', () => {
         {
           fieldResolver: profileFieldResolver,
           selectionFields: ['id', 'bio'],
+          parentResolver: gaqResolverDescriptions[0],
         },
       ]);
     });

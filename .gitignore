@@ -15,6 +15,6 @@ dist/*
 tmp/*
 
 .env
-.privates_notes.md
+.private_note.md
 
 ca.pem

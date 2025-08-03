@@ -4,7 +4,6 @@ import {
   GaqCollectionClient,
   GaqRootQueryFilter,
   GaqDbQueryOptions,
-  GaqLogger,
   GaqManyToManyCollectionConfig,
   GaqManyToManyAdapterResponse,
 } from '@graphql-auto-queries/core';

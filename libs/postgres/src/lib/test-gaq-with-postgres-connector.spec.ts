@@ -384,19 +384,19 @@ describe('GaqPostgresConnector', () => {
     expect(response.body.data?.actorGaqQueryResult.result[0].actor_id).toBe(2);
     expect(
       response.body.data?.actorGaqQueryResult.result[0].films[0].film_id
-    ).toBe(1);
+    ).toBe(3);
     expect(
       response.body.data?.actorGaqQueryResult.result[0].films[0].language_id
     ).toBe(1);
     expect(
       response.body.data?.actorGaqQueryResult.result[0].films[0].title
-    ).toBe('ACADEMY DINOSAUR');
+    ).toBe('ADAPTATION HOLES');
     expect(
       response.body.data?.actorGaqQueryResult.result[0].films[0].language
         .language_id
     ).toBe(1);
     expect(
-      response.body.data?.actorGaqQueryResult.result[0].films[0].language.name
+      response.body.data?.actorGaqQueryResult.result[0].films[0].language.name.trim()
     ).toBe('English');
   });
   it('should be able to resolve many to one relationship', async () => {

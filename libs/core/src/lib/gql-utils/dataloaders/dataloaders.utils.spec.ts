@@ -13,7 +13,7 @@ describe('dataloaders utils', () => {
 
   beforeEach(() => {
     userFieldResolver = {
-      parentKey: 'id',
+      parentKey: 'authorId',
       fieldKey: 'id',
       isArray: false,
       fieldType: 'User',
@@ -28,7 +28,7 @@ describe('dataloaders utils', () => {
 
     postFieldResolver = {
       parentKey: 'id',
-      fieldKey: 'posts',
+      fieldKey: 'authorId',
       isArray: true,
       fieldType: 'Post',
       fieldName: 'posts',
@@ -41,7 +41,7 @@ describe('dataloaders utils', () => {
     };
     profileFieldResolver = {
       parentKey: 'id',
-      fieldKey: 'profile',
+      fieldKey: 'userId',
       isArray: false,
       fieldType: 'Profile',
       fieldName: 'profile',
@@ -115,7 +115,7 @@ describe('dataloaders utils', () => {
       expect(results).toEqual([
         {
           fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
+          selectionFields: ['id', 'title', 'authorId'],
           parentResolver: gaqResolverDescriptions[0],
         },
         {
@@ -125,7 +125,7 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: profileFieldResolver,
-          selectionFields: ['id', 'bio'],
+          selectionFields: ['id', 'bio', 'userId'],
           parentResolver: gaqResolverDescriptions[0],
         },
       ]);
@@ -170,7 +170,7 @@ describe('dataloaders utils', () => {
       expect(results).toEqual([
         {
           fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
+          selectionFields: ['id', 'title', 'authorId'],
           parentResolver: gaqResolverDescriptions[0],
         },
         {
@@ -180,7 +180,7 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: profileFieldResolver,
-          selectionFields: ['bio'],
+          selectionFields: ['bio', 'userId'],
           parentResolver: gaqResolverDescriptions[0],
         },
       ]);
@@ -224,7 +224,7 @@ describe('dataloaders utils', () => {
       expect(results).toEqual([
         {
           fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
+          selectionFields: ['id', 'title', 'authorId'],
           parentResolver: gaqResolverDescriptions[0],
         },
         {
@@ -234,7 +234,7 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: profileFieldResolver,
-          selectionFields: ['id', 'bio'],
+          selectionFields: ['id', 'bio', 'userId'],
           parentResolver: gaqResolverDescriptions[0],
         },
       ]);
@@ -264,7 +264,7 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
+          selectionFields: ['id', 'title', 'authorId'],
           parentResolver: gaqResolverDescriptions[0],
         },
       ]);
@@ -326,7 +326,7 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
+          selectionFields: ['id', 'title', 'authorId'],
           parentResolver: gaqResolverDescriptions[0],
         },
         {
@@ -367,12 +367,12 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: postFieldResolver,
-          selectionFields: ['id', 'title'],
+          selectionFields: ['id', 'title', 'authorId'],
           parentResolver: gaqResolverDescriptions[0],
         },
         {
           fieldResolver: profileFieldResolver,
-          selectionFields: ['id', 'bio'],
+          selectionFields: ['id', 'bio', 'userId'],
           parentResolver: gaqResolverDescriptions[0],
         },
       ]);
@@ -407,7 +407,7 @@ describe('dataloaders utils', () => {
         },
         {
           fieldResolver: profileFieldResolver,
-          selectionFields: ['id', 'bio'],
+          selectionFields: ['id', 'bio', 'userId'],
           parentResolver: gaqResolverDescriptions[0],
         },
       ]);

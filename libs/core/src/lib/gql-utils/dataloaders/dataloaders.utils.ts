@@ -246,7 +246,9 @@ function addFieldResolverToResultSet(
   }
   results.push({
     fieldResolver,
-    selectionFields: Array.from(new Set(selectionFields)),
+    selectionFields: Array.from(
+      new Set([...selectionFields, fieldResolver.fieldKey])
+    ),
     parentResolver,
   });
   return results;

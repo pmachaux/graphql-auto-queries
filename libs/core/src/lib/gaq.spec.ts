@@ -681,8 +681,40 @@ describe('gaq', () => {
       };
       await request(url).post('/').send(queryData);
       expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
-      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'title']);
-      expect(reviewSpy.mock.calls[0][1]).toEqual(['id', 'content']);
+      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'title', 'authorId']);
+      expect(reviewSpy.mock.calls[0][1]).toEqual(['id', 'content', 'bookId']);
+    });
+    it('should call the the field resolver in the dataloader with only the selected fields and the field key even if not requested', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput!) {
+            bookGaqQueryResult(filters: $filters) {
+              result {
+                id
+                title
+                authorId
+                author {
+                  name
+                }
+                reviews {
+                  id
+                  content
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+
+      await request(url).post('/').send(queryData);
+      expect(authorSpy.mock.calls[0][1]).toEqual(['name', 'id']);
+      expect(reviewSpy.mock.calls[0][1]).toEqual(['id', 'content', 'bookId']);
     });
   });
   describe('limit and maxLimit support', () => {
@@ -1243,7 +1275,7 @@ describe('gaq', () => {
         mtmCollectionName: 'books_authors',
         mtmFieldKeyAlias: 'author_id',
         mtmParentKeyAlias: 'bookId',
-        requestedFields: ['name'],
+        requestedFields: ['name', 'authorId'],
         fieldCollectionName: 'awesome_authors',
         fieldKey: 'authorId',
       });

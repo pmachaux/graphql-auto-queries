@@ -13,7 +13,6 @@ import {
 } from '../../interfaces/common.interfaces';
 import { BREAK } from 'graphql/language/visitor';
 import {
-  FieldResolverInQuery,
   FindAllTypesInQueriesResult,
   TypeResolverInQuery,
 } from './dataloaders.interface';
@@ -286,29 +285,23 @@ export const findAllTypesInQueries = (
           if (gaqQueryFieldResolver) {
             currentResolver = gaqQueryFieldResolver;
           }
-          return;
-        }
-        const hasSelectionFields = node.selectionSet?.selections.length > 0;
-        const matchingFieldResolver = currentResolver?.fieldResolvers.find(
-          (fieldResolver) => fieldResolver.fieldName === node.name.value
-        );
-        if (hasSelectionFields && matchingFieldResolver) {
-          const nextResolver = gaqResolverDescriptions.find(
-            (resolver) =>
-              resolver.linkedType === matchingFieldResolver.fieldType
-          );
-          const collectedFields = collectSelectionFields(
-            node.selectionSet.selections,
-            nextResolver,
-            fragmentMap
-          );
-          addFieldResolverToResultSet(
-            results,
-            matchingFieldResolver,
-            currentResolver,
-            collectedFields
-          );
-          currentResolver = nextResolver;
+          const resultSelection = (
+            node.selectionSet?.selections.find(
+              (selection) =>
+                selection.kind === Kind.FIELD &&
+                selection.name.value === 'result'
+            ) as FieldNode
+          )?.selectionSet?.selections;
+          if (resultSelection) {
+            collectNestedFieldResolvers(
+              resultSelection,
+              currentResolver,
+              gaqResolverDescriptions,
+              fragmentMap,
+              results,
+              true
+            );
+          }
         }
       },
     },

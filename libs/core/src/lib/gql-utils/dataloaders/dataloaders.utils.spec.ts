@@ -1,0 +1,416 @@
+import { parse } from 'graphql';
+import { findAllTypesInQueries } from './dataloaders.utils';
+import {
+  GaqFieldResolverDescription,
+  GaqResolverDescription,
+} from '../../interfaces/common.interfaces';
+
+describe('dataloaders utils', () => {
+  let userFieldResolver: GaqFieldResolverDescription;
+  let postFieldResolver: GaqFieldResolverDescription;
+  let profileFieldResolver: GaqFieldResolverDescription;
+  let gaqResolverDescriptions: GaqResolverDescription[];
+
+  beforeEach(() => {
+    userFieldResolver = {
+      parentKey: 'authorId',
+      fieldKey: 'id',
+      isArray: false,
+      fieldType: 'User',
+      fieldName: 'author',
+      dataloaderName: 'User_user_dataloader',
+      limit: null,
+      mtmCollectionName: null,
+      mtmFieldKeyAlias: null,
+      mtmParentKeyAlias: null,
+      mtmDataloaderName: null,
+    };
+
+    postFieldResolver = {
+      parentKey: 'id',
+      fieldKey: 'authorId',
+      isArray: true,
+      fieldType: 'Post',
+      fieldName: 'posts',
+      dataloaderName: 'User_posts_dataloader',
+      limit: null,
+      mtmCollectionName: null,
+      mtmFieldKeyAlias: null,
+      mtmParentKeyAlias: null,
+      mtmDataloaderName: null,
+    };
+    profileFieldResolver = {
+      parentKey: 'id',
+      fieldKey: 'userId',
+      isArray: false,
+      fieldType: 'Profile',
+      fieldName: 'profile',
+      dataloaderName: 'User_profile_dataloader',
+      limit: null,
+      mtmCollectionName: null,
+      mtmFieldKeyAlias: null,
+      mtmParentKeyAlias: null,
+      mtmDataloaderName: null,
+    };
+    gaqResolverDescriptions = [
+      {
+        queryName: 'userGaqQueryResult',
+        resultType: 'UserGaqResult',
+        linkedType: 'User',
+        fieldResolvers: [postFieldResolver, profileFieldResolver],
+        dbCollectionName: 'User',
+        defaultLimit: null,
+        maxLimit: null,
+        federationReferenceResolver: null,
+      },
+      {
+        queryName: 'postGaqQueryResult',
+        resultType: 'Post',
+        linkedType: 'Post',
+        fieldResolvers: [userFieldResolver],
+        dbCollectionName: 'Post',
+        defaultLimit: null,
+        maxLimit: null,
+        federationReferenceResolver: null,
+      },
+      {
+        queryName: 'profileGaqQueryResult',
+        resultType: 'Profile',
+        linkedType: 'Profile',
+        fieldResolvers: [],
+        dbCollectionName: 'Profile',
+        defaultLimit: null,
+        maxLimit: null,
+        federationReferenceResolver: null,
+      },
+    ];
+  });
+
+  describe('findAllTypesInQueries', () => {
+    it('should find all top-level and nested GaqFieldResolverDescriptions up to depth 3, and collect correct selection fields', () => {
+      const query = `
+        query GaqUserQuery($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+          userGaqQueryResult(filters: $filters, options: $options) {
+            result {
+              id
+               posts {
+                id
+                title
+                author {
+                  id
+                  name
+                  profile {
+                    id
+                    bio
+                  }
+                }
+              }
+              name
+            }
+          }
+        }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title', 'authorId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: userFieldResolver,
+          selectionFields: ['id', 'name'],
+          parentResolver: gaqResolverDescriptions[1],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio', 'userId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+
+    it('should handle repeated use of the same GaqFieldResolverDescription and merge requested fields', () => {
+      const query = `
+      query GaqUserQuery($filters: GaqRootFiltersInput!, $options: GaqQueryOptions) {
+        userGaqQueryResult(filters: $filters, options: $options) {
+          result {
+            id
+             posts {
+              id
+              title
+              author {
+                name
+                profile {
+                  bio
+                }
+              }
+            }
+            name
+          }
+        }
+        userGaqQueryResult(filters: $filters2) {
+          result {
+            id
+             posts {
+              id
+              title
+              author {
+                id
+              }
+            }
+            name
+          }
+        }
+      }
+    `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title', 'authorId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: userFieldResolver,
+          selectionFields: ['name', 'id'],
+          parentResolver: gaqResolverDescriptions[1],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['bio', 'userId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+    it('should support spread fragments in the query', () => {
+      const query = `
+      query UserQuery($filters: UserFilters) {
+        userGaqQueryResult(filters: $filters) {
+          result {
+            id
+            name
+            ...UserFields
+          }
+        }
+      }
+
+      fragment UserFields on User {
+        posts {
+          id
+          title
+          author {
+            ...AuthorFields
+          }
+        }
+      }
+
+      fragment AuthorFields on Author {
+        name
+        profile {
+          ...ProfileFields
+        }
+      }
+
+      fragment ProfileFields on Profile {
+        id
+        bio
+      }
+    `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title', 'authorId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: userFieldResolver,
+          selectionFields: ['name'],
+          parentResolver: gaqResolverDescriptions[1],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio', 'userId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+    it('should handle reference resolvers in the query', () => {
+      const query = `
+      query GetUserByReference {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+            id
+            name
+            posts {
+              id
+              title
+            }
+          }
+        }
+      }
+    `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title', 'authorId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+    it('should handle reference resolvers in the query when multiple representations are provided', () => {
+      const query = `
+      query GetUserByReference {
+        _entities(representations: [{ __typename: "User", id: "123" }, { __typename: "User", id: "456" }]) {
+          ... on User {
+            id
+            name
+          }
+        }
+      }
+
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+
+    it('should handle reference resolvers in the query when multiple representations are provided with distinct types', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(
+          representations: [
+            { __typename: "User", id: "123" },
+            { __typename: "Post", id: "456" }
+          ]
+        ) {
+          ... on User {
+            id
+            name
+            posts {
+              id
+              title
+            }
+          }
+          ... on Post {
+            id
+            title
+          }
+        }
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title', 'authorId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+        {
+          selectionFields: ['id', 'title'],
+          typeResolver: gaqResolverDescriptions[1],
+        },
+      ]);
+    });
+    it('should handle nested spread fragments in reference resolvers in the query', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+            id
+            name
+            posts {
+              id
+              title
+            }
+            profile {
+              id
+              ...ProfileFields
+            }
+          }
+        }
+      }
+      fragment ProfileFields on Profile {
+        id
+        bio
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: postFieldResolver,
+          selectionFields: ['id', 'title', 'authorId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio', 'userId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+    it('should handle nested spread fragments right below the reference resolver in the query', () => {
+      const query = `
+      query GetReferenceEntities {
+        _entities(representations: [{ __typename: "User", id: "123" }]) {
+          ... on User {
+          id
+            ...UserFields
+          }
+        }
+      }
+      fragment UserFields on User {
+        name
+        profile {
+          ...ProfileFields
+        }
+      }
+      fragment ProfileFields on Profile {
+        id
+        bio
+      }
+      `;
+      const ast = parse(query);
+      const results = findAllTypesInQueries(ast, gaqResolverDescriptions);
+      expect(results).toEqual([
+        {
+          selectionFields: ['id', 'name'],
+          typeResolver: gaqResolverDescriptions[0],
+        },
+        {
+          fieldResolver: profileFieldResolver,
+          selectionFields: ['id', 'bio', 'userId'],
+          parentResolver: gaqResolverDescriptions[0],
+        },
+      ]);
+    });
+  });
+});

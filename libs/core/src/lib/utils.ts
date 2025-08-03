@@ -1,3 +1,14 @@
+import {
+  FindAllTypesInQueriesResult,
+  TypeResolverInQuery,
+  FieldResolverInQuery,
+} from './gql-utils/dataloaders/dataloaders.interface';
+import {
+  GaqDataLoaderFederationSuffix,
+  GaqFieldResolverDescription,
+  GaqResolverDescription,
+} from './interfaces/common.interfaces';
+
 export const omit = <T extends object, K extends keyof T>(
   source: T,
   ...keys: K[]
@@ -55,3 +66,27 @@ export const getManyToManyFieldDataloaderName = ({
 }): string => {
   return `${typeName}${fieldName}ManyToManyDataloader`;
 };
+
+export const getTypeDataLoaderName = (
+  gaqResolverDescription: GaqResolverDescription
+) => {
+  return `${gaqResolverDescription.linkedType}${GaqDataLoaderFederationSuffix}`;
+};
+
+/*
+ * Type guard to check if a FindAllTypesInQueriesResult is a TypeResolverInQuery
+ */
+export function isTypeResolverInQuery(
+  result: FindAllTypesInQueriesResult
+): result is TypeResolverInQuery {
+  return (result as TypeResolverInQuery).typeResolver !== undefined;
+}
+
+/**
+ * Type guard to check if a FindAllTypesInQueriesResult is a FieldResolverInQuery
+ */
+export function isFieldResolverInQuery(
+  result: FindAllTypesInQueriesResult
+): result is FieldResolverInQuery {
+  return (result as FieldResolverInQuery).fieldResolver !== undefined;
+}

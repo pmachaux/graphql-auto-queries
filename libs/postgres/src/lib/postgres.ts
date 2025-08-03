@@ -4,7 +4,6 @@ import {
   GaqCollectionClient,
   GaqRootQueryFilter,
   GaqDbQueryOptions,
-  GaqLogger,
   GaqManyToManyCollectionConfig,
   GaqManyToManyAdapterResponse,
 } from '@graphql-auto-queries/core';
@@ -130,25 +129,17 @@ const getDbAdapter = (client: Client) => {
 
 export async function getPostgresGaqDbConnector({
   config,
-  logger,
 }: {
   config: string | ClientConfig;
-  logger: GaqLogger;
 }): Promise<{
   dbAdapter: GaqDbAdapter;
   client: Client;
 }> {
   const client = new Client(config);
-  try {
-    await client.connect();
-    logger.info(`Connected to Postgres database`);
-    return {
-      dbAdapter: getDbAdapter(client),
-      client,
-    };
-  } catch (error) {
-    logger.error(`Error connecting to Postgres database`);
-    logger.error(error);
-    throw error;
-  }
+
+  await client.connect();
+  return {
+    dbAdapter: getDbAdapter(client),
+    client,
+  };
 }

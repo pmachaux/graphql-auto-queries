@@ -45,6 +45,10 @@ export type Nullable<T> = {
   [K in keyof T]: T[K] | null;
 };
 
+export const GaqQuerySuffix = 'GaqQueryResult';
+export const GaqQueryResultTypeSuffix = 'GaqResult';
+export const GaqDataLoaderFederationSuffix = 'federationReferenceDataloader';
+
 export interface GaqLogger {
   info: (message: any) => void;
   warn: (message: any) => void;

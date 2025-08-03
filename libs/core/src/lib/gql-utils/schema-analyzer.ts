@@ -15,9 +15,12 @@ import {
   DetailedGaqFieldDefinition,
   DetailedGaqTypeDefinition,
   GaqContext,
+  GaqDataLoaderFederationSuffix,
   GaqFieldResolverArguments,
   GaqFieldResolverDescription,
   GaqLogger,
+  GaqQueryResultTypeSuffix,
+  GaqQuerySuffix,
   GaqResolverDescription,
   GaqServerOptions,
 } from '../interfaces/common.interfaces';
@@ -403,8 +406,8 @@ export const getAutoResolversAndDataloaders = (
       typeDefinition
     );
     return {
-      queryName: `${typeDefinition.name.toLowerCase()}GaqQueryResult`,
-      resultType: `${typeDefinition.name}GaqResult`,
+      queryName: `${typeDefinition.name.toLowerCase()}${GaqQuerySuffix}`,
+      resultType: `${typeDefinition.name}${GaqQueryResultTypeSuffix}`,
       linkedType: typeDefinition.name,
       fieldResolvers,
       dbCollectionName: typeDefinition.dbCollectionName,
@@ -415,7 +418,7 @@ export const getAutoResolversAndDataloaders = (
           ? null
           : {
               keys: typeDefinition.federationKeys,
-              dataloaderName: `${typeDefinition.name}federationReferenceDataloader`,
+              dataloaderName: `${typeDefinition.name}${GaqDataLoaderFederationSuffix}`,
             },
     } satisfies GaqResolverDescription;
   });

@@ -13,7 +13,7 @@
     "publish:mongo": "cd dist/libs/mongo && npm publish --access public",
     "publish:postgres": "cd dist/libs/postgres && npm publish --access public",
     "publish:sql-converter": "cd dist/libs/sql-converter && npm publish --access public",
-    "publish:all": "pnpm run prepare-release && pnpm run publish:core && pnpm run publish:sql-converter && pnpm run publish:mongo && pnpm run publish:postgres"
+    "publish:all": "pnpm run publish:core && pnpm run publish:sql-converter && pnpm run publish:mongo && pnpm run publish:postgres"
   },
   "keywords": [],
   "author": "",

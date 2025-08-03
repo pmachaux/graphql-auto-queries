@@ -26,7 +26,6 @@ export function getGaqTools<TContext extends GaqContext>(
       gaqResolverDescriptions,
       dbCollectionNameMap,
     } = getTypeDefsAndResolvers(config, { logger });
-
     const withGaqContextFn: GqlContextFn = async ({ req, res }) => {
       const ast = req.body.query ? parse(req.body.query) : null;
       const traceId = randomUUID();

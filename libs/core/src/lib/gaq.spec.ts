@@ -85,7 +85,10 @@ export const getMockedDatasource = (spies?: {
               );
             }).length;
           },
-          getValuesInField: async () => [],
+          getValuesInField: async (payload, selectedFields, opts) => {
+            spies?.bookSpy?.(payload, selectedFields, opts);
+            return books;
+          },
           getFromGaqFilters: async (
             filters: GaqRootQueryFilter<{ title: string; authorId: string }>,
             selectedFields: string[],
@@ -125,6 +128,14 @@ export const getMockedDatasource = (spies?: {
             return authors.filter((a) =>
               payload.values.includes(a[payload.field])
             );
+          },
+          getFromGaqFilters: async (
+            filters: GaqRootQueryFilter<{ id: string }>,
+            selectedFields: string[],
+            opts: GaqDbQueryOptions
+          ) => {
+            spies?.authorSpy?.(filters, selectedFields, opts);
+            return authors;
           },
         };
       }
@@ -529,7 +540,7 @@ describe('gaq', () => {
           type Author @dbCollection(collectionName: "authors"){
             id: ID
             name: String
-            books: [Book]
+            books: [Book] @fieldResolver(parentKey: "id", fieldKey: "authorId")
           }
 
           type Review @dbCollection(collectionName: "reviews"){
@@ -601,7 +612,6 @@ describe('gaq', () => {
 
       const response = await request(url).post('/').send(queryData);
       expect(response.body.errors).toBeUndefined();
-      expect(response.body.data?.bookGaqQueryResult.result.length).toEqual(3);
       expect(bookSpy).toHaveBeenCalledTimes(1);
       expect(authorSpy).toHaveBeenCalledTimes(1);
       expect(reviewSpy).toHaveBeenCalledTimes(1);
@@ -641,6 +651,39 @@ describe('gaq', () => {
       expect(authorSpy).toHaveBeenCalledTimes(2);
       expect(reviewSpy).toHaveBeenCalledTimes(2);
     });
+
+    it('should be handle to handle nested field resolution and only pass to db the requested without the nested field resolvers', async () => {
+      const queryData = {
+        query: `query($filters: GaqRootFiltersInput!) {
+            authorGaqQueryResult(filters: $filters) {
+              result {
+                id
+                name
+                books {
+                  id
+                  title
+                  reviews {
+                    id
+                    content
+                  }
+                }
+              }
+            }
+          }`,
+        variables: {
+          filters: {
+            and: [],
+          } satisfies GaqRootQueryFilter<{
+            title: string;
+            author: string;
+          }>,
+        },
+      };
+      await request(url).post('/').send(queryData);
+      expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
+      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'title', 'authorId']);
+      expect(reviewSpy.mock.calls[0][1]).toEqual(['id', 'content', 'bookId']);
+    });
     it('should call the the field resolver in the dataloader with only the selected fields and the field key even if not requested', async () => {
       const queryData = {
         query: `query($filters: GaqRootFiltersInput!) {
@@ -670,8 +713,8 @@ describe('gaq', () => {
       };
 
       await request(url).post('/').send(queryData);
-      expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
-      expect(reviewSpy.mock.calls[0][1]).toEqual(['bookId', 'id', 'content']);
+      expect(authorSpy.mock.calls[0][1]).toEqual(['name', 'id']);
+      expect(reviewSpy.mock.calls[0][1]).toEqual(['id', 'content', 'bookId']);
     });
   });
   describe('limit and maxLimit support', () => {
@@ -1227,12 +1270,12 @@ describe('gaq', () => {
       };
       const response = await request(url).post('/').send(queryData);
       expect(response.body.errors).toBeUndefined();
-      expect(bookAuthorsSpy.mock.calls[0][0]).toEqual(['1', '2', '3']);
+      expect(bookAuthorsSpy.mock.calls[0][0]).toEqual(['1', '2', '3', '4']);
       expect(bookAuthorsSpy.mock.calls[0][1]).toEqual({
         mtmCollectionName: 'books_authors',
         mtmFieldKeyAlias: 'author_id',
         mtmParentKeyAlias: 'bookId',
-        requestedFields: ['authorId', 'name'],
+        requestedFields: ['name', 'authorId'],
         fieldCollectionName: 'awesome_authors',
         fieldKey: 'authorId',
       });

@@ -1,5 +1,13 @@
 # @graphql-auto-queries/mongo
 
+## 0.0.6
+
+### Patch Changes
+
+- Fix deep nested dataloaders
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.6
+
 ## 0.0.5
 
 ### Patch Changes

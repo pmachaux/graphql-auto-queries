@@ -1,5 +1,11 @@
 # @graphql-auto-queries/core
 
+## 0.0.6
+
+### Patch Changes
+
+- Fix deep nested dataloaders
+
 ## 0.0.5
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @graphql-auto-queries/postgres
 
+## 0.0.7
+
+### Patch Changes
+
+- Support federation
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.7
+  - @graphql-auto-queries/sql-converter@0.0.7
+
 ## 0.0.6
 
 ### Patch Changes

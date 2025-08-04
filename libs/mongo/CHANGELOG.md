@@ -1,5 +1,13 @@
 # @graphql-auto-queries/mongo
 
+## 0.0.7
+
+### Patch Changes
+
+- Support federation
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.7
+
 ## 0.0.6
 
 ### Patch Changes

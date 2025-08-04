@@ -1,5 +1,11 @@
 # @graphql-auto-queries/core
 
+## 0.0.8
+
+### Patch Changes
+
+- fix duplicate queries in case of federation
+
 ## 0.0.7
 
 ### Patch Changes

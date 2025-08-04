@@ -1,5 +1,13 @@
 # @graphql-auto-queries/mongo
 
+## 0.0.8
+
+### Patch Changes
+
+- fix duplicate queries in case of federation
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.8
+
 ## 0.0.7
 
 ### Patch Changes

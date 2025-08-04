@@ -1053,13 +1053,13 @@ describe('gaq', () => {
             import: ["@key", "@shareable"]
           )
 
-          type Author @dbCollection(collectionName: "authors") @key(fields: "id"){
+          extend type Author @dbCollection(collectionName: "authors") @key(fields: "id"){
             id: ID
             name: String
             books: [Book] @fieldResolver(parentKey: "id", fieldKey: "authorId")
           }
 
-          extend type Book @dbCollection(collectionName: "books"){
+          type Book @dbCollection(collectionName: "books"){
             id: ID
             title: String
             authorId: String

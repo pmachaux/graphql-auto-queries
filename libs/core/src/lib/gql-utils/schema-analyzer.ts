@@ -459,6 +459,7 @@ export const getGaqTypeDefsAndResolvers = (
     gaqDefaultScalarsAndInputs +
     config.typeDefs +
     gaqResolverDescriptions
+      .filter((resolver) => !resolver.federationReferenceResolver)
       .map(
         (resolver) => `type ${resolver.resultType} {
         result: [${resolver.linkedType}]
@@ -468,6 +469,7 @@ export const getGaqTypeDefsAndResolvers = (
       .join('\n') +
     `type Query {
     ${gaqResolverDescriptions
+      .filter((resolver) => !resolver.federationReferenceResolver)
       .map(
         (resolver) =>
           `${resolver.queryName}(filters: GaqRootFiltersInput!, options: GaqQueryOptions): ${resolver.resultType}`

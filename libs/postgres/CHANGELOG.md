@@ -1,5 +1,35 @@
 # @graphql-auto-queries/postgres
 
+## 1.0.0
+
+### Major Changes
+
+- First stable version
+
+### Patch Changes
+
+- Updated dependencies
+  - @graphql-auto-queries/sql-converter@1.0.0
+  - @graphql-auto-queries/core@1.0.0
+
+## 0.0.8
+
+### Patch Changes
+
+- fix duplicate queries in case of federation
+- Updated dependencies
+  - @graphql-auto-queries/sql-converter@0.0.8
+  - @graphql-auto-queries/core@0.0.8
+
+## 0.0.7
+
+### Patch Changes
+
+- Support federation
+- Updated dependencies
+  - @graphql-auto-queries/core@0.0.7
+  - @graphql-auto-queries/sql-converter@0.0.7
+
 ## 0.0.6
 
 ### Patch Changes

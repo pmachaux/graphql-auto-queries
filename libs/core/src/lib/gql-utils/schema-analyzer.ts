@@ -338,7 +338,10 @@ function extractTypeFromNestedType(type: TypeNode): string {
 function isObjectTypeDefinition(
   def: DefinitionNode
 ): def is ObjectTypeDefinitionNode {
-  return def.kind === Kind.OBJECT_TYPE_DEFINITION;
+  return (
+    def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+    def.kind === Kind.OBJECT_TYPE_EXTENSION
+  );
 }
 
 const getObjectTypesDefinitionsFromDocumentNode = (
@@ -486,6 +489,24 @@ export const setDbCollectionNameMap = (
         if (node.name.value === 'Query' || node.name.value === 'Mutation') {
           return;
         }
+        const dbCollectionDirective = node.directives?.find(
+          (directive) => directive.name.value === 'dbCollection'
+        );
+        if (dbCollectionDirective) {
+          const collectionNameArg = dbCollectionDirective.arguments?.find(
+            (arg) => arg.name.value === 'collectionName'
+          );
+          if (collectionNameArg?.value.kind === Kind.STRING) {
+            dbCollectionNameMap.set(
+              node.name.value,
+              collectionNameArg.value.value
+            );
+          }
+        }
+      },
+    },
+    ObjectTypeExtension: {
+      enter(node) {
         const dbCollectionDirective = node.directives?.find(
           (directive) => directive.name.value === 'dbCollection'
         );

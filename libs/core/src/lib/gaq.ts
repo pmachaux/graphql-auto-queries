@@ -13,7 +13,7 @@ export function getGaqTools<TContext extends GaqContext>(
   config: GaqServerOptions
 ): {
   typeDefs: DocumentNode;
-  resolvers: GraphQLResolverMap<TContext>;
+  resolvers: GraphQLResolverMap<unknown>;
   withGaqContextFn: ({ req, res }: { req: any; res: any }) => Promise<TContext>;
 } {
   const logger = config.logger ?? getDefaultLogger();

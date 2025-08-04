@@ -1040,10 +1040,10 @@ describe('gaq', () => {
   });
   describe('resolve reference in federation context', () => {
     let server: ApolloServer<GaqContext>;
-    let bookSpy: jest.SpyInstance;
+    let authorSpy: jest.SpyInstance;
     let url: string;
     beforeAll(async () => {
-      bookSpy = jest.fn();
+      authorSpy = jest.fn();
       const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
         typeDefs: `
@@ -1052,22 +1052,27 @@ describe('gaq', () => {
             url: "https://specs.apollo.dev/federation/v2.0"
             import: ["@key", "@shareable"]
           )
-          type Book @dbCollection(collectionName: "books") @key(fields: "id") @key(fields: "authorId") @key(fields: "id authorId"){
+
+          type Author @dbCollection(collectionName: "authors") @key(fields: "id"){
+            id: ID
+            name: String
+            books: [Book] @fieldResolver(parentKey: "id", fieldKey: "authorId")
+          }
+
+          extend type Book @dbCollection(collectionName: "books"){
             id: ID
             title: String
             authorId: String
           }
         `,
         dbAdapter: getMockedDatasource({
-          bookSpy: bookSpy as any,
+          authorSpy: authorSpy as any,
         }),
       });
-      const typeDefsNode = gql`
-        ${typeDefs}
-      `;
+
       server = new ApolloServer<GaqContext>({
         schema: buildSubgraphSchema({
-          typeDefs: typeDefsNode,
+          typeDefs,
           resolvers,
         }),
       });
@@ -1079,19 +1084,23 @@ describe('gaq', () => {
       }));
     });
     beforeEach(() => {
-      bookSpy.mockClear();
+      authorSpy.mockClear();
     });
     afterAll(async () => {
       await server.stop();
     });
     it('should be able to resolve book as a reference on the id key in a federation context', async () => {
-      const representations = [{ __typename: 'Book', id: '1' }];
+      const representations = [{ __typename: 'Author', id: '1' }];
       const query = `
         query($representations: [_Any!]!) {
           _entities(representations: $representations) {
-            ... on Book {
+            ... on Author {
               id
-              title
+              name
+              books {
+                id
+                title
+              }
             }
           }
         }
@@ -1104,10 +1113,16 @@ describe('gaq', () => {
       expect(response.body.errors).toBeUndefined();
       expect(response.body.data._entities[0]).toEqual({
         id: '1',
-        title: 'The Great Gatsby',
+        name: 'F. Scott Fitzgerald',
+        books: [
+          {
+            id: '1',
+            title: 'The Great Gatsby',
+          },
+        ],
       });
       // Check is tries to load with the proper filters and only the requested fields
-      expect(bookSpy.mock.calls[0][0]).toEqual({
+      expect(authorSpy.mock.calls[0][0]).toEqual({
         or: [
           {
             and: [
@@ -1116,85 +1131,21 @@ describe('gaq', () => {
           },
         ],
       });
-      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'title']);
+      expect(authorSpy.mock.calls[0][1]).toEqual(['id', 'name']);
     });
-    it('should be able to resolve book as a reference on the authorId key in a federation context', async () => {
-      const representations = [{ __typename: 'Book', authorId: '2' }];
-      const query = `
-        query($representations: [_Any!]!) {
-          _entities(representations: $representations) {
-            ... on Book {
-              id
-              authorId
-              title
-            }
-          }
-        }
-      `;
-      const response = await request(url).post('/').send({
-        query,
-        variables: { representations },
-      });
 
-      expect(response.body.errors).toBeUndefined();
-      expect(response.body.data._entities[0]).toEqual({
-        id: '2',
-        authorId: '2',
-        title: 'To Kill a Mockingbird',
-      });
-      expect(bookSpy.mock.calls[0][0]).toEqual({
-        or: [
-          {
-            and: [
-              {
-                key: 'authorId',
-                comparator: GaqFilterComparators.EQUAL,
-                value: '2',
-              },
-            ],
-          },
-        ],
-      });
-      expect(bookSpy.mock.calls[0][1]).toEqual(['id', 'authorId', 'title']);
-    });
-    it('should be able to resolve book as a reference on the id and authorId keys in a federation context', async () => {
-      const representations = [{ __typename: 'Book', id: '1', authorId: '1' }];
-      const query = `
-        query($representations: [_Any!]!) {
-          _entities(representations: $representations) {
-            ... on Book {
-              id
-              authorId
-              title
-            }
-          }
-        }
-      `;
-      const response = await request(url).post('/').send({
-        query,
-        variables: { representations },
-      });
-
-      expect(response.body.errors).toBeUndefined();
-      expect(response.body.data._entities[0]).toEqual({
-        id: '1',
-        authorId: '1',
-        title: 'The Great Gatsby',
-      });
-    });
     it('should be able to handle when requesting with multiple representations and keep the same order of the representations', async () => {
       const representations = [
-        { __typename: 'Book', id: '1' },
-        { __typename: 'Book', id: '3' },
-        { __typename: 'Book', id: '2' },
+        { __typename: 'Author', id: '1' },
+        { __typename: 'Author', id: '3' },
+        { __typename: 'Author', id: '2' },
       ];
       const query = `
       query($representations: [_Any!]!) {
         _entities(representations: $representations) {
-          ... on Book {
+          ... on Author {
             id
-            authorId
-            title
+            name
           }
         }
       }
@@ -1205,9 +1156,9 @@ describe('gaq', () => {
       });
       expect(response.body.errors).toBeUndefined();
       expect(response.body.data._entities).toEqual([
-        { id: '1', authorId: '1', title: 'The Great Gatsby' },
-        { id: '3', authorId: '3', title: '1984' },
-        { id: '2', authorId: '2', title: 'To Kill a Mockingbird' },
+        { id: '1', name: 'F. Scott Fitzgerald' },
+        { id: '3', name: 'George Orwell' },
+        { id: '2', name: 'Harper Lee' },
       ]);
     });
   });

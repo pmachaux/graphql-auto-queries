@@ -583,18 +583,18 @@ describe('schema-analyzer', () => {
     it('should handle federation keys', () => {
       const options = {
         typeDefs: `
-        type Book @dbCollection(collectionName: "books") @key(fields: "id authorId") {
+        extend type Book @dbCollection(collectionName: "books") @key(fields: "id authorId") {
           id: ID
           authorId: String
           title: String
         }
 
-        type Author @dbCollection(collectionName: "authors") @key(fields: "id") {
+       extend type Author @dbCollection(collectionName: "authors") @key(fields: "id") {
           id: ID
           name: String
         }
 
-        type Review @dbCollection(collectionName: "reviews") @key(fields: "id") @key(fields: "bookId") {
+        extend type Review @dbCollection(collectionName: "reviews") @key(fields: "id") @key(fields: "bookId") {
           id: ID
           bookId: String
         }

@@ -1,5 +1,11 @@
 # @graphql-auto-queries/core
 
+## 1.0.0
+
+### Major Changes
+
+- First stable version
+
 ## 0.0.8
 
 ### Patch Changes

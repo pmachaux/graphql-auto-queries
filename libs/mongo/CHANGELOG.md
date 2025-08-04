@@ -1,5 +1,16 @@
 # @graphql-auto-queries/mongo
 
+## 1.0.0
+
+### Major Changes
+
+- First stable version
+
+### Patch Changes
+
+- Updated dependencies
+  - @graphql-auto-queries/core@1.0.0
+
 ## 0.0.8
 
 ### Patch Changes

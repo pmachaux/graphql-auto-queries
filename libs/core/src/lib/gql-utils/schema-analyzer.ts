@@ -10,6 +10,7 @@ import {
   visit,
   IntValueNode,
   DirectiveNode,
+  print,
 } from 'graphql';
 import {
   DetailedGaqFieldDefinition,
@@ -431,6 +432,14 @@ export const getAutoResolversAndDataloaders = (
   };
 };
 
+const printSchema = (typeDefs: string | DocumentNode): string => {
+  return typeof typeDefs === 'string' ? typeDefs : print(typeDefs);
+};
+
+const appendSchema = (...schemas: (string | DocumentNode)[]): string => {
+  return schemas.map(printSchema).join('\n');
+};
+
 export const getGaqTypeDefsAndResolvers = (
   config: Pick<GaqServerOptions, 'typeDefs' | 'dbAdapter'>,
   { logger }: { logger: GaqLogger }
@@ -446,7 +455,9 @@ export const getGaqTypeDefsAndResolvers = (
   if (gaqResolverDescriptions.length === 0) {
     logger.debug('No auto resolvers to build');
     return {
-      typeDefs: parse(gaqDefaultScalarsAndInputs + config.typeDefs),
+      typeDefs: parse(
+        appendSchema(gaqDefaultScalarsAndInputs, config.typeDefs)
+      ),
       gaqResolverDescriptions: [],
     };
   }
@@ -455,19 +466,18 @@ export const getGaqTypeDefsAndResolvers = (
   );
 
   logger.debug('Building auto schema');
-  const typeDefs =
-    gaqDefaultScalarsAndInputs +
-    config.typeDefs +
-    gaqResolverDescriptions
-      .filter((resolver) => !resolver.federationReferenceResolver)
-      .map(
-        (resolver) => `type ${resolver.resultType} {
-        result: [${resolver.linkedType}]
-        count: Int
-      }`
-      )
-      .join('\n') +
-    `type Query {
+
+  const schemaForQueriesReturnTypes = gaqResolverDescriptions
+    .filter((resolver) => !resolver.federationReferenceResolver)
+    .map(
+      (resolver) => `type ${resolver.resultType} {
+    result: [${resolver.linkedType}]
+    count: Int
+  }`
+    )
+    .join('\n');
+
+  const schemaForQueries = `type Query {
     ${gaqResolverDescriptions
       .filter((resolver) => !resolver.federationReferenceResolver)
       .map(
@@ -477,6 +487,12 @@ export const getGaqTypeDefsAndResolvers = (
       .join('\n')}
   }`;
 
+  const typeDefs = appendSchema(
+    gaqDefaultScalarsAndInputs,
+    config.typeDefs,
+    schemaForQueriesReturnTypes,
+    schemaForQueries
+  );
   logger.debug('Auto schema built');
   return { typeDefs: parse(typeDefs), gaqResolverDescriptions };
 };

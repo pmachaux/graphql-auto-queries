@@ -18,10 +18,7 @@
       "@graphql-auto-queries/core": ["libs/core/src/index.ts"],
       "@graphql-auto-queries/mongo": ["libs/mongo/src/index.ts"],
       "@graphql-auto-queries/postgres": ["libs/postgres/src/index.ts"],
-      "@graphql-auto-queries/sql-converter": [
-        "libs/sql-converter/src/index.ts"
-      ],
-      "@graphql-auto-queries/test-lib": ["libs/test-library/src/index.ts"]
+      "@graphql-auto-queries/sql-converter": ["libs/sql-converter/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

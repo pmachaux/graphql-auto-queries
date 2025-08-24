@@ -191,6 +191,42 @@ export const getMockedDatasource = (spies?: {
 };
 
 describe('gaq', () => {
+  describe('gql handler', () => {
+    it('should be compliant with gql tag function', () => {
+      const gqlSchema = gql`
+        extend schema
+          @link(
+            url: "https://specs.apollo.dev/federation/v2.0"
+            import: ["@key", "@shareable"]
+          )
+
+        type Book @dbCollection(collectionName: "books") {
+          id: ID
+          title: String
+          authorId: String
+          author: Author @fieldResolver(parentKey: "authorId", fieldKey: "id")
+          reviews: [Review] @fieldResolver(parentKey: "id", fieldKey: "bookId")
+        }
+
+        type Author @dbCollection(collectionName: "authors") {
+          id: ID
+          name: String
+          books: [Book]
+        }
+
+        type Movie @dbCollection(collectionName: "movies") {
+          _id: ID @shareable
+          title: String
+          year: Int
+        }
+      `;
+      const { typeDefs } = getGaqTools({
+        typeDefs: gqlSchema,
+        dbAdapter: getMockedDatasource({}),
+      });
+      expect(typeDefs).toBeDefined();
+    });
+  });
   describe('basic features', () => {
     let server: ApolloServer<GaqContext>;
     let url: string;
@@ -1170,14 +1206,20 @@ describe('gaq', () => {
       bookAuthorsSpy = jest.fn();
       const { typeDefs, resolvers, withGaqContextFn } = getGaqTools({
         logger: getTestLogger(),
-        typeDefs: `
-          type Book @dbCollection(collectionName: "books"){
+        typeDefs: gql`
+          type Book @dbCollection(collectionName: "books") {
             id: ID
             title: String
-            authors: [Author] @fieldResolver(parentKey: "id", fieldKey: "authorId") @manyToManyFieldResolver(collectionName: "books_authors", fieldKeyAlias: "author_id", parentKeyAlias: "bookId")
+            authors: [Author]
+              @fieldResolver(parentKey: "id", fieldKey: "authorId")
+              @manyToManyFieldResolver(
+                collectionName: "books_authors"
+                fieldKeyAlias: "author_id"
+                parentKeyAlias: "bookId"
+              )
           }
-        
-          type Author @dbCollection(collectionName: "awesome_authors"){
+
+          type Author @dbCollection(collectionName: "awesome_authors") {
             id: ID
             name: String
           }

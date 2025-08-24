@@ -1,5 +1,11 @@
 # @graphql-auto-queries/core
 
+## 1.0.1
+
+### Patch Changes
+
+- Fix bug when providing typedefs with gql literal method
+
 ## 1.0.0
 
 ### Major Changes

@@ -1,5 +1,13 @@
 # @graphql-auto-queries/mongo
 
+## 1.0.1
+
+### Patch Changes
+
+- Fix bug when providing typedefs with gql literal method
+- Updated dependencies
+  - @graphql-auto-queries/core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
